@@ -102,9 +102,16 @@ $HtmlStart = @"
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>$ShopTitle</title>
     
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
+    <script>
+        let u = new URL(window.location.href);
+        if (!u.searchParams.has('v')) {
+            u.searchParams.set('v', new Date().getTime());
+            window.location.replace(u.toString());
+        } else {
+            u.searchParams.delete('v');
+            window.history.replaceState(null, '', u.toString());
+        }
+    </script>
 
     <meta property="og:title" content="$ShopTitle">
     <meta property="og:description" content="$ShopDesc">
