@@ -9,14 +9,14 @@ Add-Type -AssemblyName System.Windows.Forms
 
 # ================= 設定區 =================
 $LineLink = "https://lin.ee/7NldLO6"
-$ImageFolder = ".\images" # 🧹 已經幫你改回只掃描單一資料夾
+$ImageFolder = ".\images"
 $CsvPath = ".\items.csv"
 $ShopTitle = "📦 質感小物出清"
 $ShopDesc  = "全新與二手好物特賣，點擊進來挖寶！"
 $SiteUrl   = "https://select-store.github.io/sale/" 
 # =========================================
 
-# 🚀 掃描照片 (強制濾除同名檔案)
+# 🚀 掃描照片 (單一資料夾，濾除重複檔名)
 $Photos = @()
 $SeenFiles = @{}
 if (Test-Path $ImageFolder) { 
@@ -31,7 +31,7 @@ if (Test-Path $ImageFolder) {
 } 
 if ($Photos.Count -eq 0) { [Microsoft.VisualBasic.Interaction]::MsgBox("❌ 找不到照片！請確認 images 資料夾內有圖片。", 48, "錯誤"); exit }
 
-# 智慧分組 (以檔案前綴為 Key)
+# 智慧分組
 $GroupedProducts = @{}
 foreach ($Photo in $Photos) {
     $ProductName = $Photo.BaseName -replace '[_\-\s0-9]+$', ''
@@ -40,27 +40,34 @@ foreach ($Photo in $Photos) {
     $GroupedProducts[$ProductName] += $Photo.FullName
 }
 
-# 🚀 讀取舊資料庫 (強制清除 CSV 內的幽靈重複資料)
+# 🚀 核心修復：強制重構 CSV 欄位，解決舊資料擴充報錯 Bug
 $ExistingItems = @()
 $SeenCsvNames = @{}
 if (Test-Path $CsvPath) {
     $RawItems = Import-Csv -Path $CsvPath -Encoding UTF8
     foreach ($Item in $RawItems) {
         if (-not $SeenCsvNames.ContainsKey($Item.name)) {
-            $ExistingItems += $Item
+            $ExistingItems += [PSCustomObject]@{
+                name       = $Item.name
+                price      = $Item.price
+                sale_price = if ($null -ne $Item.sale_price) { $Item.sale_price } else { "" }
+                desc       = $Item.desc
+                url        = if ($null -ne $Item.url) { $Item.url } else { "" }
+                image      = if ($null -ne $Item.image) { $Item.image } else { "" }
+            }
             $SeenCsvNames[$Item.name] = $true
         }
     }
 }
 
-# 建立 DNA 記憶字典
+# 建立 DNA 記憶字典 (極限無視大小寫配對)
 $DnaMap = @{}
 foreach ($Item in $ExistingItems) {
-    $DnaMap[$Item.name] = $Item
+    $DnaMap[$Item.name.ToLower()] = $Item
     if (-not [string]::IsNullOrWhiteSpace($Item.image)) {
         $paths = $Item.image -split '\|'
         foreach ($p in $paths) {
-            $fname = [System.IO.Path]::GetFileName($p -replace '/', '\')
+            $fname = [System.IO.Path]::GetFileName($p -replace '/', '\').ToLower()
             if (-not [string]::IsNullOrWhiteSpace($fname)) { $DnaMap[$fname] = $Item }
         }
     }
@@ -72,13 +79,16 @@ $ProcessedNames = @{}
 
 foreach ($Key in $GroupedProducts.Keys) {
     $GroupedImages = $GroupedProducts[$Key]
-    $GroupedFileNames = $GroupedImages | ForEach-Object { [System.IO.Path]::GetFileName($_) }
+    $GroupedFileNames = $GroupedImages | ForEach-Object { [System.IO.Path]::GetFileName($_).ToLower() }
     
     $MatchedItem = $null
+    
+    # 1. DNA 尋找
     foreach ($fname in $GroupedFileNames) {
         if ($DnaMap.ContainsKey($fname)) { $MatchedItem = $DnaMap[$fname]; break }
     }
-    if ($null -eq $MatchedItem -and $DnaMap.ContainsKey($Key)) { $MatchedItem = $DnaMap[$Key] }
+    # 2. 舊名稱尋找
+    if ($null -eq $MatchedItem -and $DnaMap.ContainsKey($Key.ToLower())) { $MatchedItem = $DnaMap[$Key.ToLower()] }
     
     if ($null -ne $MatchedItem) {
         if (-not $ProcessedNames.ContainsKey($MatchedItem.name)) {
@@ -126,7 +136,7 @@ for ($i=0; $i -lt $clb.Items.Count; $i++) {
     else { $target.desc = $target.desc -replace "\[售出\]\s*", "" }
 }
 
-# 🛡️ 檔案寫入保護 (寫入前強制過濾確保無重複)
+# 🛡️ 檔案寫入保護
 try {
     $NewItems | Select-Object -Unique name, price, sale_price, desc, url, image | Export-Csv -Path $CsvPath -Encoding UTF8 -NoTypeInformation -Force -ErrorAction Stop
 } catch {
@@ -333,5 +343,5 @@ $HtmlEnd = @"
 </body></html>
 "@
 [System.IO.File]::WriteAllText("$ScriptPath\index.html", ($HtmlStart + $CardsHtml + $HtmlEnd), [System.Text.Encoding]::UTF8)
-$formStock.Dispose(); git add . ; git commit -m "V13-Clean" ; git push origin main
-[Microsoft.VisualBasic.Interaction]::MsgBox("🎉 純淨淨化模組已執行完畢！`n幽靈資料庫已強制清除！", 64, "大功告成")
+$formStock.Dispose(); git add . ; git commit -m "V14-SchemaFix" ; git push origin main
+[Microsoft.VisualBasic.Interaction]::MsgBox("🎉 最終抓蟲大成功！`n資料庫欄位已強制修復，無論你怎麼改商品名稱，系統都會死死鎖定照片 DNA！", 64, "大功告成")
