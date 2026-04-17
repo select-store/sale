@@ -74,14 +74,28 @@ if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
 } else { exit }
 $NewItems | Export-Csv -Path $CsvPath -Encoding UTF8 -NoTypeInformation
 
-# 🚀 破圖殺手：動態時間戳記 (強迫瀏覽器讀取新圖)
+# 🚀 破圖殺手：動態時間戳記 (強迫瀏覽器讀取新網頁)
 $CacheBuster = (Get-Date).ToString("MMddHHmmss")
 
-# ⭐️ 擷取第一張圖片做為社群預覽圖 (OG Image)
+# ⭐️ 擷取第一張圖片做為社群預覽圖 (OG Image 必須維持實體連結)
 $OgImageUrl = ""
 if ($NewItems.Count -gt 0) {
     $FirstImagePath = ($NewItems[0].image -split ',')[0].Trim() -replace '\\', '/'
     $OgImageUrl = $SiteUrl + $FirstImagePath + "?v=" + $CacheBuster
+}
+
+# ⭐️ Base64 壓縮引擎 (圖片直接寫入網頁，絕對防禦破圖)
+function Optimize-ImageToBase64 {
+    param([string]$Path)
+    try {
+        $bmp = [System.Drawing.Image]::FromFile($Path); $maxWidth = 800; $width = $bmp.Width; $height = $bmp.Height
+        if ($width -gt $maxWidth) { $ratio = $maxWidth / $width; $width = $maxWidth; $height = [int]($height * $ratio) }
+        $newBmp = New-Object System.Drawing.Bitmap($width, $height); $g = [System.Drawing.Graphics]::FromImage($newBmp)
+        $g.Clear([System.Drawing.Color]::White); $g.InterpolationMode = 7; $g.DrawImage($bmp, 0, 0, $width, $height)
+        $ms = New-Object System.IO.MemoryStream; $newBmp.Save($ms, [System.Drawing.Imaging.ImageFormat]::Jpeg)
+        $base64 = [System.Convert]::ToBase64String($ms.ToArray()); $g.Dispose(); $newBmp.Dispose(); $bmp.Dispose(); $ms.Dispose()
+        return "data:image/jpeg;base64,$base64"
+    } catch { return $null }
 }
 
 $HtmlStart = @"
@@ -90,6 +104,7 @@ $HtmlStart = @"
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>$ShopTitle</title>
     <script>
+        // 網頁本體的快取殺手
         let u = new URL(window.location.href);
         if (!u.searchParams.has('v')) {
             u.searchParams.set('v', new Date().getTime());
@@ -110,7 +125,6 @@ $HtmlStart = @"
         #searchInput { width: 100%; padding: 14px 20px; border: 2px solid #e0e0e0; border-radius: 30px; font-size: 1rem; outline: none; transition: all 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         #searchInput:focus { border-color: #3498db; box-shadow: 0 4px 12px rgba(52, 152, 219, 0.2); }
         
-        /* 標籤與排序按鈕 */
         .filter-container { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 800px; margin: 0 auto 20px auto; }
         .filter-btn { background: #e0e0e0; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 0.9rem; color: #333; transition: all 0.2s; }
         .filter-btn:hover, .filter-btn.active { background: #3498db; color: white; }
@@ -133,7 +147,6 @@ $HtmlStart = @"
         .thumbnails img { width: 40px; height: 40px; object-fit: contain; border-radius: 6px; cursor: pointer; border: 2px solid transparent; background: #fff; }
         .card h3 { margin: 0 0 6px 0; font-size: 1.05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #2c3e50; }
         
-        /* 價格特價顯示 */
         .price-container { margin-bottom: 8px; }
         .price { color: #e74c3c; font-weight: bold; font-size: 1.15rem; }
         .old-price { color: #999; text-decoration: line-through; font-size: 0.9rem; margin-right: 8px; }
@@ -212,15 +225,23 @@ foreach ($Item in $NewItems) {
         $UrlHtml = "<div class=`"no-link`"></div>"
     }
 
-    # 解除 Base64，掛上防破圖晶片 (?v=時間戳記)
-    $ImagesPaths = $Item.image -split ',' | ForEach-Object { $_.Trim() -replace '\\', '/' }
-    $MainImage = if ($ImagesPaths.Count -gt 0) { $ImagesPaths[0] + "?v=" + $CacheBuster } else { "" }
+    # 執行 Base64 壓縮封裝
+    $ImagesPaths = $Item.image -split ',' | ForEach-Object { $_.Trim() }
+    $Base64Images = @()
+    foreach ($ImgPath in $ImagesPaths) { 
+        $fullPath = Join-Path $ScriptPath $ImgPath
+        $b64 = Optimize-ImageToBase64 -Path $fullPath
+        if ($b64) { $Base64Images += $b64 } 
+    }
+    # 防呆：如果真的抓不到圖，給一張透明圖片避免版面崩潰
+    if ($Base64Images.Count -eq 0) { $Base64Images += "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" }
     
+    $MainImage = $Base64Images[0]
     $Thumbs = ""
-    if ($ImagesPaths.Count -gt 1) { 
+    if ($Base64Images.Count -gt 1) { 
         $Thumbs += '<div class="thumbnails">'
-        foreach ($img in $ImagesPaths) { 
-            $Thumbs += "<img src=`"$img?v=$CacheBuster`" loading=`"lazy`" onclick=`"changeMainImg(this, '$img?v=$CacheBuster')`">" 
+        foreach ($b64img in $Base64Images) { 
+            $Thumbs += "<img src=`"$b64img`" loading=`"lazy`" onclick=`"changeMainImg(this, '$b64img')`">" 
         }
         $Thumbs += '</div>' 
     }
@@ -305,7 +326,7 @@ try {
     git commit -m $commitMsg | Out-Null
     git pull origin main --no-edit | Out-Null
     git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 完美！系統升級完畢且全自動更新至雲端！", 64, "大功告成")
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 完美！【絕對防禦版】系統升級完畢且全自動更新至雲端！", 64, "大功告成")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("❌ 自動推播失敗。請確認網路連線。", 48, "系統錯誤")
 }
