@@ -101,6 +101,11 @@ $HtmlStart = @"
 <html lang="zh-TW"><head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>$ShopTitle</title>
+    
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
     <meta property="og:title" content="$ShopTitle">
     <meta property="og:description" content="$ShopDesc">
     <meta property="og:image" content="$OgImageUrl">
@@ -255,10 +260,11 @@ try {
     $commitMsg = "📦 庫存更新: $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
     git commit -m $commitMsg | Out-Null
     
-    # 推送至遠端倉庫
+    # 執行推播 (安全起見，先嘗試合併雲端可能有的變更)
+    git pull origin main --no-edit | Out-Null
     git push origin main
     
     [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 完美！網頁與照片已全自動更新至雲端！`n約 1 分鐘後即可看到最新網頁，LINE 也可以抓到最新圖卡了！", 64, "終極一鍵發布")
 } catch {
-    [Microsoft.VisualBasic.Interaction]::MsgBox("❌ 自動推播失敗。`n請確認：`n1. 是否已安裝 Git？`n2. 你的資料夾是否為 git clone 下來的專案？`n3. 網路是否正常？", 48, "系統錯誤")
+    [Microsoft.VisualBasic.Interaction]::MsgBox("❌ 自動推播失敗。`n請確認網路連線，或手動執行 git 檢查。", 48, "系統錯誤")
 }
