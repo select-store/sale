@@ -37,7 +37,7 @@ if (Test-Path $CsvPath) {
     foreach ($Item in $OldItems) { $ExistingData[$Item.name] = $Item }
 }
 
-# 🚀 專業版建檔介面 (修正排版位移)
+# 🚀 專業版建檔介面 (排版校正)
 $NewItems = @()
 foreach ($Key in $GroupedProducts.Keys) {
     if ($ExistingData.ContainsKey($Key)) {
@@ -45,31 +45,22 @@ foreach ($Key in $GroupedProducts.Keys) {
     } else {
         $formIn = New-Object System.Windows.Forms.Form
         $formIn.Text = "🆕 新商品建檔：$Key"; $formIn.Size = New-Object System.Drawing.Size(400, 550); $formIn.StartPosition = "CenterScreen"; $formIn.Font = New-Object System.Drawing.Font("微軟正黑體", 10)
-
-        # 排版輔助函數
-        $startX = 20
-        $boxWidth = 340
-        
+        $startX = 20; $boxWidth = 340
         $addLbl = { param($t, $y) $l = New-Object System.Windows.Forms.Label; $l.Text=$t; $l.Location=New-Object System.Drawing.Point($startX, $y); $l.AutoSize=$true; $formIn.Controls.Add($l) }
         $addTxt = { param($v, $y, $h=30) $t = New-Object System.Windows.Forms.TextBox; $t.Text=$v; $t.Location=New-Object System.Drawing.Point($startX, ($y+22)); $t.Size=New-Object System.Drawing.Size($boxWidth, $h); if($h -gt 30){$t.Multiline=$true}; $formIn.Controls.Add($t); return $t }
-
         &$addLbl "商品名稱 (Name)" 10;   $tName = &$addTxt $Key 10
         &$addLbl "原價 (Price)" 75;      $tPrice = &$addTxt "100" 75
         &$addLbl "特價 (Sale Price - 選填)" 140; $tSale = &$addTxt "" 140
         &$addLbl "商品描述 (Description)" 205;   $tDesc = &$addTxt "全新/二手出清。" 205 80
         &$addLbl "參考網址 (URL - 選填)" 320;    $tUrl = &$addTxt "" 320
-
         $btnSave = New-Object System.Windows.Forms.Button; $btnSave.Text="💾 儲存並繼續"; $btnSave.Location="120,420"; $btnSave.Size="150,45"; $btnSave.BackColor="LightBlue"; $btnSave.DialogResult="OK"
         $formIn.Controls.Add($btnSave); $formIn.AcceptButton = $btnSave
-        
-        if ($formIn.ShowDialog() -eq "OK") {
-            $NewItems += [PSCustomObject]@{ name=$tName.Text; price=$tPrice.Text; sale_price=$tSale.Text; desc=$tDesc.Text; url=$tUrl.Text; image=($GroupedProducts[$Key] -join "|") }
-        } else { exit }
+        if ($formIn.ShowDialog() -eq "OK") { $NewItems += [PSCustomObject]@{ name=$tName.Text; price=$tPrice.Text; sale_price=$tSale.Text; desc=$tDesc.Text; url=$tUrl.Text; image=($GroupedProducts[$Key] -join "|") } } else { exit }
         $formIn.Dispose()
     }
 }
 
-# ⭐️ 庫存盤點 (標記售出)
+# ⭐️ 庫存盤點
 $formStock = New-Object System.Windows.Forms.Form
 $formStock.Text = "📦 庫存狀況調整"; $formStock.Size = New-Object System.Drawing.Size(380, 500); $formStock.StartPosition = "CenterScreen"
 $clb = New-Object System.Windows.Forms.CheckedListBox; $clb.Location="15,20"; $clb.Size="330,360"; $clb.CheckOnClick=$true
@@ -87,7 +78,7 @@ for ($i=0; $i -lt $clb.Items.Count; $i++) {
 $NewItems | Export-Csv -Path $CsvPath -Encoding UTF8 -NoTypeInformation
 
 # ================= 網頁生成與壓縮 =================
-$CacheBuster = (Get-Date).ToString("MMddHHmmss")
+$CacheBuster = (Get-Date).ToString("yyyyMMddHHmmss")
 function Optimize-ImageToBase64 {
     param([string]$Path)
     try {
@@ -106,19 +97,27 @@ $HtmlStart = @"
 <html lang="zh-TW"><head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
     <title>$ShopTitle</title>
     <script>
-        let u = new URL(window.location.href);
-        if (!u.searchParams.has('v') || u.searchParams.get('v') !== '$CacheBuster') {
-            u.searchParams.set('v', '$CacheBuster'); window.location.replace(u.toString());
-        }
+        // 🚀 網頁本體刷新邏輯：比對版本號，不一致就強制 Hard Reload
+        (function() {
+            const currentVersion = '$CacheBuster';
+            const savedVersion = localStorage.getItem('shop_version');
+            if (savedVersion !== currentVersion) {
+                localStorage.setItem('shop_version', currentVersion);
+                // 加上隨機參數並強制重刷，繞過所有快取
+                const cleanUrl = window.location.origin + window.location.pathname + '?refresh=' + currentVersion;
+                window.location.replace(cleanUrl);
+            }
+        })();
     </script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #eee; margin: 0; }
         .search-container { padding: 10px; background: #1e1e1e; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #333; }
         #searchInput { width: 100%; max-width: 800px; margin: 0 auto; display: block; padding: 12px 20px; border: 1px solid #444; border-radius: 25px; background: #222; color: #fff; box-sizing: border-box; }
         .filter-container { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding: 15px 10px; }
-        .filter-btn { background: #333; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; color: #ccc; }
+        .filter-btn { background: #333; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; color: #ccc; font-size: 0.9rem; }
         .filter-btn.active { background: #3498db; color: white; }
         .grid-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 12px; max-width: 1600px; margin: 0 auto; }
         @media (min-width: 768px) { .grid-container { grid-template-columns: repeat(4, 1fr); gap: 15px; } }
@@ -133,14 +132,14 @@ $HtmlStart = @"
         .thumb-img { width: 38px; height: 38px; object-fit: cover; border-radius: 4px; cursor: pointer; opacity: 0.5; }
         .thumb-img:hover { opacity: 1; border: 1px solid #3498db; }
         .info { flex-grow: 1; display: flex; flex-direction: column; margin-top: 8px; }
-        h3 { margin: 0; font-size: 1rem; color: #fff; }
+        h3 { margin: 0; font-size: 1rem; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .price-container { margin: 5px 0; }
         .price { color: #e74c3c; font-weight: bold; font-size: 1.1rem; }
         .old-price { color: #777; text-decoration: line-through; font-size: 0.85rem; margin-right: 6px; }
         .new-price { color: #e74c3c; font-weight: bold; background: rgba(231, 76, 60, 0.15); padding: 2px 6px; border-radius: 4px; }
         .desc { font-size: 0.85rem; color: #aaa; margin: 5px 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-        .ref-link { font-size: 0.85rem; color: #3498db; text-decoration: none; font-weight: bold; }
-        .btn-copy { background: #3498db; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .ref-link { font-size: 0.85rem; color: #3498db; text-decoration: none; font-weight: bold; margin-top: auto; }
+        .btn-copy { background: #3498db; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px; }
         .floating-line { position: fixed; bottom: 30px; right: 30px; background: #06C755; color: white; padding: 14px 24px; border-radius: 50px; text-decoration: none; font-weight: bold; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
         #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 999; justify-content: center; align-items: center; }
         #lightbox img { max-width: 95%; max-height: 95%; object-fit: contain; }
@@ -238,5 +237,5 @@ $HtmlEnd = @"
 </body></html>
 "@
 [System.IO.File]::WriteAllText("$ScriptPath\index.html", ($HtmlStart + $CardsHtml + $HtmlEnd), [System.Text.Encoding]::UTF8)
-$formStock.Dispose(); git add . ; git commit -m "V9.1-FullCode" ; git push origin main
-[Microsoft.VisualBasic.Interaction]::MsgBox("🎉 排版對齊 & 完整程式碼部署完畢！", 64, "大功告成")
+$formStock.Dispose(); git add . ; git commit -m "V9.2-UltimateCacheKill" ; git push origin main
+[Microsoft.VisualBasic.Interaction]::MsgBox("🎉 終極快取殺手已部署！`n以後發布完，點開網址它會自動閃一下重刷，保證最新！", 64, "大功告成")
