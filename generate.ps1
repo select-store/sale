@@ -1,7 +1,8 @@
-﻿# 強制鎖定當前資料夾
-$ScriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
-if ([string]::IsNullOrWhiteSpace($ScriptPath)) { $ScriptPath = $PWD.Path }
-Set-Location -Path $ScriptPath
+﻿# 🛡️ 絕對路徑防護：鎖定當前腳本所在資料夾
+$ScriptDir = $PSScriptRoot
+if ([string]::IsNullOrWhiteSpace($ScriptDir)) { $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path }
+if ([string]::IsNullOrWhiteSpace($ScriptDir)) { $ScriptDir = $PWD.Path }
+Set-Location -Path $ScriptDir
 
 Add-Type -AssemblyName Microsoft.VisualBasic
 Add-Type -AssemblyName System.Drawing
@@ -9,27 +10,32 @@ Add-Type -AssemblyName System.Windows.Forms
 
 # ================= 設定區 =================
 $LineLink = "https://lin.ee/7NldLO6"
-$ImageFolder = ".\images"
-$CsvPath = ".\items.csv"
+$ImageFolder = Join-Path $ScriptDir "images"
+$CsvPath = Join-Path $ScriptDir "items.csv"
 $ShopTitle = "📦 質感小物出清"
 $ShopDesc  = "全新與二手好物特賣，點擊進來挖寶！"
 $SiteUrl   = "https://select-store.github.io/sale/" 
 # =========================================
 
-# 1. 讀取舊資料庫
+# 1. 嚴格讀取舊資料庫 (防空值、防鎖死)
 $ExistingItems = @()
 $ExistingMap = @{}
 if (Test-Path $CsvPath) {
-    $RawItems = Import-Csv -Path $CsvPath -Encoding UTF8
-    foreach ($Item in $RawItems) {
-        if (-not [string]::IsNullOrWhiteSpace($Item.name) -and -not $ExistingMap.ContainsKey($Item.name)) {
-            $ExistingItems += $Item
-            $ExistingMap[$Item.name] = $Item
+    try {
+        $RawItems = Import-Csv -Path $CsvPath -Encoding UTF8 -ErrorAction Stop
+        foreach ($Item in $RawItems) {
+            if (-not [string]::IsNullOrWhiteSpace($Item.name) -and -not $ExistingMap.ContainsKey($Item.name)) {
+                $ExistingItems += $Item
+                $ExistingMap[$Item.name] = $Item
+            }
         }
+    } catch {
+        [Microsoft.VisualBasic.Interaction]::MsgBox("❌ 無法讀取 items.csv！請確認檔案沒有被 Excel 鎖死打開中。", 48, "錯誤")
+        exit
     }
 }
 
-# 2. 建立 DNA 記憶字典 (極限配對)
+# 2. 建立 DNA 記憶字典
 $DnaMap = @{}
 foreach ($Item in $ExistingItems) {
     if (-not [string]::IsNullOrWhiteSpace($Item.image)) {
@@ -54,7 +60,7 @@ if (Test-Path $ImageFolder) {
         }
     }
 } 
-if ($Photos.Count -eq 0) { [Microsoft.VisualBasic.Interaction]::MsgBox("❌ 找不到照片！", 48, "錯誤"); exit }
+if ($Photos.Count -eq 0) { [Microsoft.VisualBasic.Interaction]::MsgBox("❌ images 資料夾內找不到任何照片！", 48, "錯誤"); exit }
 
 # 智慧分組
 $GroupedProducts = @{}
@@ -65,7 +71,7 @@ foreach ($Photo in $Photos) {
     $GroupedProducts[$ProductName] += $Photo.FullName
 }
 
-# 4. 核心比對與建檔邏輯 (還原極致順暢流程)
+# 4. 核心比對與建檔邏輯 (自動提示 + 靜默合併)
 $NewItems = @()
 $ProcessedNames = @{} 
 
@@ -74,16 +80,13 @@ foreach ($Key in $GroupedProducts.Keys) {
     $GroupedFileNames = $GroupedImages | ForEach-Object { [System.IO.Path]::GetFileName($_).ToLower() }
     
     $MatchedItem = $null
-    
-    # DNA 配對：如果之前存過這張照片，直接沿用不囉嗦！
     foreach ($fname in $GroupedFileNames) {
         if ($DnaMap.ContainsKey($fname)) { $MatchedItem = $DnaMap[$fname]; break }
     }
-    # 備案配對：檔名剛好等於舊商品名
     if ($null -eq $MatchedItem -and $ExistingMap.ContainsKey($Key)) { $MatchedItem = $ExistingMap[$Key] }
     
     if ($null -ne $MatchedItem) {
-        # 【老朋友靜默處理】直接繼承舊資料，更新圖片路徑，不彈任何視窗！
+        # 完全認識的照片：靜默處理，不彈視窗
         if (-not $ProcessedNames.ContainsKey($MatchedItem.name)) {
             $OldImages = if($MatchedItem.image) { $MatchedItem.image -split '\|' } else { @() }
             $MergedImages = $OldImages + $GroupedImages | Select-Object -Unique
@@ -92,56 +95,37 @@ foreach ($Key in $GroupedProducts.Keys) {
             $ProcessedNames[$MatchedItem.name] = $true
         }
     } else {
-        # 【全新商品建檔】乾淨俐落，不再問你要不要綁定！
+        # 不認識的照片：彈出視窗，啟用 AI 自動補全功能
         $formIn = New-Object System.Windows.Forms.Form
-        $formIn.Text = "🆕 新商品建檔：$Key"; $formIn.Size = New-Object System.Drawing.Size(400, 520); $formIn.StartPosition = "CenterScreen"; $formIn.Font = New-Object System.Drawing.Font("微軟正黑體", 10)
-        $startX = 20; $boxWidth = 340
+        $formIn.Text = "🆕 發現未建檔照片：$Key"; $formIn.Size = New-Object System.Drawing.Size(420, 520); $formIn.StartPosition = "CenterScreen"; $formIn.Font = New-Object System.Drawing.Font("微軟正黑體", 10)
+        $startX = 20; $boxWidth = 360
         
         $addLbl = { param($t, $y) $l = New-Object System.Windows.Forms.Label; $l.Text=$t; $l.Location=New-Object System.Drawing.Point($startX, $y); $l.AutoSize=$true; $formIn.Controls.Add($l) }
         $addTxt = { param($v, $y, $h=30) $t = New-Object System.Windows.Forms.TextBox; $t.Text=$v; $t.Location=New-Object System.Drawing.Point($startX, ($y+22)); $t.Size=New-Object System.Drawing.Size($boxWidth, $h); if($h -gt 30){$t.Multiline=$true}; $formIn.Controls.Add($t); return $t }
         
-        &$addLbl "商品名稱 (Name)" 10;   $tName = &$addTxt $Key 10
+        &$addLbl "商品名稱 (💡 輸入架上舊名稱會自動合併)" 10;   $tName = &$addTxt $Key 10
+        
+        # 🔥 核心黑科技：輸入框自動提示舊商品名稱
+        $tName.AutoCompleteMode = [System.Windows.Forms.AutoCompleteMode]::SuggestAppend
+        $tName.AutoCompleteSource = [System.Windows.Forms.AutoCompleteSource]::CustomSource
+        $autoSource = New-Object System.Windows.Forms.AutoCompleteStringCollection
+        if ($ExistingMap.Keys.Count -gt 0) { $autoSource.AddRange([string[]]($ExistingMap.Keys)) }
+        $tName.AutoCompleteCustomSource = $autoSource
+
         &$addLbl "原價 (Price)" 75;      $tPrice = &$addTxt "100" 75
         &$addLbl "特價 (Sale Price - 選填)" 140; $tSale = &$addTxt "" 140
         &$addLbl "商品描述 (Description)" 205;   $tDesc = &$addTxt "全新/二手出清。" 205 80
         &$addLbl "參考網址 (URL - 選填)" 320;    $tUrl = &$addTxt "" 320
-        
-        # （隱藏機關）如果你真的需要幫舊商品補照片，勾選這個才會出現下拉選單
-        $chkBind = New-Object System.Windows.Forms.CheckBox
-        $chkBind.Text = "進階：這張照片屬於架上的舊商品"
-        $chkBind.Location = New-Object System.Drawing.Point($startX, 390)
-        $chkBind.Size = New-Object System.Drawing.Size($boxWidth, 25)
-        $formIn.Controls.Add($chkBind)
 
-        $cmb = New-Object System.Windows.Forms.ComboBox
-        $cmb.Location = New-Object System.Drawing.Point($startX, 420)
-        $cmb.Size = New-Object System.Drawing.Size($boxWidth, 30)
-        $cmb.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
-        $cmb.Visible = $false
-        foreach ($name in $ExistingMap.Keys) { $cmb.Items.Add($name) | Out-Null }
-        if ($cmb.Items.Count -gt 0) { $cmb.SelectedIndex = 0 }
-        $formIn.Controls.Add($cmb)
-
-        $chkBind.add_CheckedChanged({
-            $cmb.Visible = $chkBind.Checked
-            if ($chkBind.Checked -and $cmb.Items.Count -gt 0) {
-                $tName.Enabled = $false; $tPrice.Enabled = $false; $tSale.Enabled = $false; $tDesc.Enabled = $false; $tUrl.Enabled = $false
-            } else {
-                $tName.Enabled = $true; $tPrice.Enabled = $true; $tSale.Enabled = $true; $tDesc.Enabled = $true; $tUrl.Enabled = $true
-            }
-        })
-
-        $btnSave = New-Object System.Windows.Forms.Button; $btnSave.Text="💾 儲存並繼續"; $btnSave.Location="120,460"; $btnSave.Size="150,45"; $btnSave.BackColor="LightBlue"; $btnSave.DialogResult="OK"
+        $btnSave = New-Object System.Windows.Forms.Button; $btnSave.Text="💾 儲存此照片"; $btnSave.Location="130,400"; $btnSave.Size="150,45"; $btnSave.BackColor="LightBlue"; $btnSave.DialogResult="OK"
         $formIn.Controls.Add($btnSave); $formIn.AcceptButton = $btnSave
         
-        # 為了容納隱藏機關，視窗高度動態調整
-        $formIn.Size = New-Object System.Drawing.Size(400, 560)
-
         if ($formIn.ShowDialog() -eq "OK") { 
-            if ($chkBind.Checked -and $cmb.Items.Count -gt 0) {
-                # 執行綁定舊商品邏輯
-                $selName = $cmb.SelectedItem.ToString()
-                $targetItem = $ExistingMap[$selName]
+            $InputName = $tName.Text.Trim()
+            
+            if ($ExistingMap.ContainsKey($InputName)) {
+                # 判斷輸入了舊名稱 ➡️ 啟動靜默合併，放棄新填的價錢描述
+                $targetItem = $ExistingMap[$InputName]
                 $OldImages = if($targetItem.image) { $targetItem.image -split '\|' } else { @() }
                 $MergedImages = $OldImages + $GroupedImages | Select-Object -Unique
                 $targetItem.image = ($MergedImages -join "|")
@@ -151,8 +135,8 @@ foreach ($Key in $GroupedProducts.Keys) {
                     $ProcessedNames[$targetItem.name] = $true
                 }
             } else {
-                # 預設流程：建立全新商品
-                $newItem = [PSCustomObject]@{ name=$tName.Text; price=$tPrice.Text; sale_price=$tSale.Text; desc=$tDesc.Text; url=$tUrl.Text; image=($GroupedImages -join "|") }
+                # 真的是全新商品
+                $newItem = [PSCustomObject]@{ name=$InputName; price=$tPrice.Text; sale_price=$tSale.Text; desc=$tDesc.Text; url=$tUrl.Text; image=($GroupedImages -join "|") }
                 $NewItems += $newItem
                 $ProcessedNames[$newItem.name] = $true
                 $ExistingMap[$newItem.name] = $newItem
@@ -301,7 +285,7 @@ foreach ($Item in $NewItems) {
     $Base64List = @(); $HighResList = @()
     foreach ($p in $ImgPaths) {
         $b = Optimize-ImageToBase64 -Path $p
-        if ($b) { $Base64List += $b; $Rel = $p.Replace($ScriptPath, "").TrimStart("\").Replace("\", "/"); $HighResList += "$($SiteUrl)$($Rel)?v=$CacheBuster" }
+        if ($b) { $Base64List += $b; $Rel = $p.Replace($ScriptDir, "").TrimStart("\").Replace("\", "/"); $HighResList += "$($SiteUrl)$($Rel)?v=$CacheBuster" }
     }
     if ($Base64List.Count -eq 0) { $Base64List += "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"; $HighResList += "" }
 
@@ -392,6 +376,6 @@ $HtmlEnd = @"
     </script>
 </body></html>
 "@
-[System.IO.File]::WriteAllText("$ScriptPath\index.html", ($HtmlStart + $CardsHtml + $HtmlEnd), [System.Text.Encoding]::UTF8)
-$formStock.Dispose(); git add . ; git commit -m "V16-SmoothFlow" ; git push origin main
-[Microsoft.VisualBasic.Interaction]::MsgBox("🎉 流程還原完畢！`n現在新照片丟進去，預設直接當新商品建檔，絕不囉唆！", 64, "大功告成")
+[System.IO.File]::WriteAllText((Join-Path $ScriptDir "index.html"), ($HtmlStart + $CardsHtml + $HtmlEnd), [System.Text.Encoding]::UTF8)
+$formStock.Dispose(); git add . ; git commit -m "V_FINAL-AutoComplete" ; git push origin main
+[Microsoft.VisualBasic.Interaction]::MsgBox("🎉 終極修復完成！輸入舊名稱就能自動合併照片了！", 64, "大功告成")
