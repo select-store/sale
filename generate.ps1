@@ -9,17 +9,27 @@ Add-Type -AssemblyName System.Windows.Forms
 
 # ================= 設定區 =================
 $LineLink = "https://lin.ee/7NldLO6"
-$ImageFolders = @(".\images", ".\images_已售出")
+$ImageFolder = ".\images" # 🧹 已經幫你改回只掃描單一資料夾
 $CsvPath = ".\items.csv"
 $ShopTitle = "📦 質感小物出清"
 $ShopDesc  = "全新與二手好物特賣，點擊進來挖寶！"
 $SiteUrl   = "https://select-store.github.io/sale/" 
 # =========================================
 
-# 掃描照片
+# 🚀 掃描照片 (強制濾除同名檔案)
 $Photos = @()
-foreach ($f in $ImageFolders) { if (Test-Path $f) { $Photos += Get-ChildItem -Path $f -Include *.jpg,*.jpeg,*.png,*.gif -Recurse } }
-if ($Photos.Count -eq 0) { [Microsoft.VisualBasic.Interaction]::MsgBox("❌ 找不到照片！請把照片放進 images 資料夾。", 48, "錯誤"); exit }
+$SeenFiles = @{}
+if (Test-Path $ImageFolder) { 
+    $Found = Get-ChildItem -Path $ImageFolder -Include *.jpg,*.jpeg,*.png,*.gif -Recurse
+    foreach ($img in $Found) {
+        $FileNameKey = $img.Name.ToLower()
+        if (-not $SeenFiles.ContainsKey($FileNameKey)) {
+            $SeenFiles[$FileNameKey] = $true
+            $Photos += $img
+        }
+    }
+} 
+if ($Photos.Count -eq 0) { [Microsoft.VisualBasic.Interaction]::MsgBox("❌ 找不到照片！請確認 images 資料夾內有圖片。", 48, "錯誤"); exit }
 
 # 智慧分組 (以檔案前綴為 Key)
 $GroupedProducts = @{}
@@ -30,19 +40,23 @@ foreach ($Photo in $Photos) {
     $GroupedProducts[$ProductName] += $Photo.FullName
 }
 
-# 讀取舊資料庫 (強制轉為陣列)
+# 🚀 讀取舊資料庫 (強制清除 CSV 內的幽靈重複資料)
 $ExistingItems = @()
+$SeenCsvNames = @{}
 if (Test-Path $CsvPath) {
-    $ExistingItems = @(Import-Csv -Path $CsvPath -Encoding UTF8)
+    $RawItems = Import-Csv -Path $CsvPath -Encoding UTF8
+    foreach ($Item in $RawItems) {
+        if (-not $SeenCsvNames.ContainsKey($Item.name)) {
+            $ExistingItems += $Item
+            $SeenCsvNames[$Item.name] = $true
+        }
+    }
 }
 
-# 🚀 建立 DNA 記憶字典 (極速且絕對精準的比對)
+# 建立 DNA 記憶字典
 $DnaMap = @{}
 foreach ($Item in $ExistingItems) {
-    # 備用配對：用舊名稱
     $DnaMap[$Item.name] = $Item
-    
-    # 核心配對：用照片檔名 (DNA)
     if (-not [string]::IsNullOrWhiteSpace($Item.image)) {
         $paths = $Item.image -split '\|'
         foreach ($p in $paths) {
@@ -52,33 +66,27 @@ foreach ($Item in $ExistingItems) {
     }
 }
 
-# 🚀 專業版建檔介面 (查字典配對)
+# 專業版建檔介面 (查字典配對)
 $NewItems = @()
-$ProcessedNames = @{} # 防止重複添加
+$ProcessedNames = @{} 
 
 foreach ($Key in $GroupedProducts.Keys) {
     $GroupedImages = $GroupedProducts[$Key]
     $GroupedFileNames = $GroupedImages | ForEach-Object { [System.IO.Path]::GetFileName($_) }
     
     $MatchedItem = $null
-    
-    # 1. 透過檔案 DNA 尋找是否已建檔
     foreach ($fname in $GroupedFileNames) {
         if ($DnaMap.ContainsKey($fname)) { $MatchedItem = $DnaMap[$fname]; break }
     }
-    
-    # 2. 備案：透過舊名稱尋找
     if ($null -eq $MatchedItem -and $DnaMap.ContainsKey($Key)) { $MatchedItem = $DnaMap[$Key] }
     
     if ($null -ne $MatchedItem) {
-        # 如果找到，更新圖片路徑並沿用，絕對不跳視窗
         if (-not $ProcessedNames.ContainsKey($MatchedItem.name)) {
             $MatchedItem.image = ($GroupedImages -join "|")
             $NewItems += $MatchedItem
             $ProcessedNames[$MatchedItem.name] = $true
         }
     } else {
-        # 真的完全沒看過的全新照片，才跳出建檔視窗
         $formIn = New-Object System.Windows.Forms.Form
         $formIn.Text = "🆕 新商品建檔：$Key"; $formIn.Size = New-Object System.Drawing.Size(400, 550); $formIn.StartPosition = "CenterScreen"; $formIn.Font = New-Object System.Drawing.Font("微軟正黑體", 10)
         $startX = 20; $boxWidth = 340
@@ -102,7 +110,7 @@ foreach ($Key in $GroupedProducts.Keys) {
     }
 }
 
-# ⭐️ 庫存盤點 (標記售出)
+# ⭐️ 庫存盤點
 $formStock = New-Object System.Windows.Forms.Form
 $formStock.Text = "📦 庫存狀況調整"; $formStock.Size = New-Object System.Drawing.Size(380, 500); $formStock.StartPosition = "CenterScreen"
 $clb = New-Object System.Windows.Forms.CheckedListBox; $clb.Location="15,20"; $clb.Size="330,360"; $clb.CheckOnClick=$true
@@ -118,11 +126,11 @@ for ($i=0; $i -lt $clb.Items.Count; $i++) {
     else { $target.desc = $target.desc -replace "\[售出\]\s*", "" }
 }
 
-# 🛡️ 檔案寫入保護 (防 Excel 鎖死)
+# 🛡️ 檔案寫入保護 (寫入前強制過濾確保無重複)
 try {
-    $NewItems | Export-Csv -Path $CsvPath -Encoding UTF8 -NoTypeInformation -Force -ErrorAction Stop
+    $NewItems | Select-Object -Unique name, price, sale_price, desc, url, image | Export-Csv -Path $CsvPath -Encoding UTF8 -NoTypeInformation -Force -ErrorAction Stop
 } catch {
-    [Microsoft.VisualBasic.Interaction]::MsgBox("❌ 嚴重錯誤：無法儲存 items.csv！`n`n你是不是用 Excel 打開了這個檔案？`n請先【關閉 Excel】後，再重新執行一次！", 48, "檔案被鎖死")
+    [Microsoft.VisualBasic.Interaction]::MsgBox("❌ 無法儲存！請先【關閉 Excel】後，再重新執行！", 48, "檔案被鎖死")
     exit
 }
 
@@ -325,5 +333,5 @@ $HtmlEnd = @"
 </body></html>
 "@
 [System.IO.File]::WriteAllText("$ScriptPath\index.html", ($HtmlStart + $CardsHtml + $HtmlEnd), [System.Text.Encoding]::UTF8)
-$formStock.Dispose(); git add . ; git commit -m "V12-Final-Stability" ; git push origin main
-[Microsoft.VisualBasic.Interaction]::MsgBox("🎉 系統重構完成！`n1. 絕對不會再重複跳建檔視窗`n2. 新增防 Excel 鎖死機制`n這台印鈔機已經無懈可擊了！", 64, "大功告成")
+$formStock.Dispose(); git add . ; git commit -m "V13-Clean" ; git push origin main
+[Microsoft.VisualBasic.Interaction]::MsgBox("🎉 純淨淨化模組已執行完畢！`n幽靈資料庫已強制清除！", 64, "大功告成")
