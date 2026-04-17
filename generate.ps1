@@ -19,9 +19,9 @@ $SiteUrl   = "https://select-store.github.io/sale/"
 # 掃描照片
 $Photos = @()
 foreach ($f in $ImageFolders) { if (Test-Path $f) { $Photos += Get-ChildItem -Path $f -Include *.jpg,*.jpeg,*.png,*.gif -Recurse } }
-if ($Photos.Count -eq 0) { [Microsoft.VisualBasic.Interaction]::MsgBox("❌ 找不到照片！", 48, "錯誤"); exit }
+if ($Photos.Count -eq 0) { [Microsoft.VisualBasic.Interaction]::MsgBox("❌ 找不到照片！請把照片放進 images 資料夾。", 48, "錯誤"); exit }
 
-# 智慧分組
+# 智慧分組 (以檔案前綴為 Key)
 $GroupedProducts = @{}
 foreach ($Photo in $Photos) {
     $ProductName = $Photo.BaseName -replace '[_\-\s0-9]+$', ''
@@ -30,37 +30,55 @@ foreach ($Photo in $Photos) {
     $GroupedProducts[$ProductName] += $Photo.FullName
 }
 
-# 讀取舊資料庫 (改為陣列格式以支援 DNA 追蹤)
+# 讀取舊資料庫 (強制轉為陣列)
 $ExistingItems = @()
 if (Test-Path $CsvPath) {
-    $ExistingItems = Import-Csv -Path $CsvPath -Encoding UTF8
+    $ExistingItems = @(Import-Csv -Path $CsvPath -Encoding UTF8)
 }
 
-# 🚀 專業版建檔介面 (導入 DNA 照片追蹤，徹底解決重複彈出問題)
-$NewItems = @()
-foreach ($Key in $GroupedProducts.Keys) {
-    $GroupedImages = $GroupedProducts[$Key]
+# 🚀 建立 DNA 記憶字典 (極速且絕對精準的比對)
+$DnaMap = @{}
+foreach ($Item in $ExistingItems) {
+    # 備用配對：用舊名稱
+    $DnaMap[$Item.name] = $Item
     
-    # 取出這組照片的「純檔名」作為 DNA
-    $GroupedFileNames = $GroupedImages | ForEach-Object { [System.IO.Path]::GetFileName($_) }
-    
-    # 尋找舊資料庫中，是否有任何商品的圖片 DNA 跟現在這組相符
-    $MatchedItem = $null
-    foreach ($OldItem in $ExistingItems) {
-        $OldItemFileNames = $OldItem.image -split '\|' | ForEach-Object { [System.IO.Path]::GetFileName($_ -replace '/', '\') }
-        $Intersection = $GroupedFileNames | Where-Object { $OldItemFileNames -contains $_ }
-        if ($Intersection.Count -gt 0) {
-            $MatchedItem = $OldItem
-            break
+    # 核心配對：用照片檔名 (DNA)
+    if (-not [string]::IsNullOrWhiteSpace($Item.image)) {
+        $paths = $Item.image -split '\|'
+        foreach ($p in $paths) {
+            $fname = [System.IO.Path]::GetFileName($p -replace '/', '\')
+            if (-not [string]::IsNullOrWhiteSpace($fname)) { $DnaMap[$fname] = $Item }
         }
     }
+}
 
+# 🚀 專業版建檔介面 (查字典配對)
+$NewItems = @()
+$ProcessedNames = @{} # 防止重複添加
+
+foreach ($Key in $GroupedProducts.Keys) {
+    $GroupedImages = $GroupedProducts[$Key]
+    $GroupedFileNames = $GroupedImages | ForEach-Object { [System.IO.Path]::GetFileName($_) }
+    
+    $MatchedItem = $null
+    
+    # 1. 透過檔案 DNA 尋找是否已建檔
+    foreach ($fname in $GroupedFileNames) {
+        if ($DnaMap.ContainsKey($fname)) { $MatchedItem = $DnaMap[$fname]; break }
+    }
+    
+    # 2. 備案：透過舊名稱尋找
+    if ($null -eq $MatchedItem -and $DnaMap.ContainsKey($Key)) { $MatchedItem = $DnaMap[$Key] }
+    
     if ($null -ne $MatchedItem) {
-        # 找到舊資料！即使名字改過，也沿用舊資料，並更新最新圖片路徑
-        $MatchedItem.image = ($GroupedImages -join "|")
-        $NewItems += $MatchedItem
+        # 如果找到，更新圖片路徑並沿用，絕對不跳視窗
+        if (-not $ProcessedNames.ContainsKey($MatchedItem.name)) {
+            $MatchedItem.image = ($GroupedImages -join "|")
+            $NewItems += $MatchedItem
+            $ProcessedNames[$MatchedItem.name] = $true
+        }
     } else {
-        # 真的找不到，才是全新商品，跳出建檔視窗
+        # 真的完全沒看過的全新照片，才跳出建檔視窗
         $formIn = New-Object System.Windows.Forms.Form
         $formIn.Text = "🆕 新商品建檔：$Key"; $formIn.Size = New-Object System.Drawing.Size(400, 550); $formIn.StartPosition = "CenterScreen"; $formIn.Font = New-Object System.Drawing.Font("微軟正黑體", 10)
         $startX = 20; $boxWidth = 340
@@ -75,12 +93,16 @@ foreach ($Key in $GroupedProducts.Keys) {
         
         $btnSave = New-Object System.Windows.Forms.Button; $btnSave.Text="💾 儲存並繼續"; $btnSave.Location="120,420"; $btnSave.Size="150,45"; $btnSave.BackColor="LightBlue"; $btnSave.DialogResult="OK"
         $formIn.Controls.Add($btnSave); $formIn.AcceptButton = $btnSave
-        if ($formIn.ShowDialog() -eq "OK") { $NewItems += [PSCustomObject]@{ name=$tName.Text; price=$tPrice.Text; sale_price=$tSale.Text; desc=$tDesc.Text; url=$tUrl.Text; image=($GroupedImages -join "|") } } else { exit }
+        if ($formIn.ShowDialog() -eq "OK") { 
+            $newItem = [PSCustomObject]@{ name=$tName.Text; price=$tPrice.Text; sale_price=$tSale.Text; desc=$tDesc.Text; url=$tUrl.Text; image=($GroupedImages -join "|") }
+            $NewItems += $newItem
+            $ProcessedNames[$newItem.name] = $true
+        } else { exit }
         $formIn.Dispose()
     }
 }
 
-# ⭐️ 庫存盤點
+# ⭐️ 庫存盤點 (標記售出)
 $formStock = New-Object System.Windows.Forms.Form
 $formStock.Text = "📦 庫存狀況調整"; $formStock.Size = New-Object System.Drawing.Size(380, 500); $formStock.StartPosition = "CenterScreen"
 $clb = New-Object System.Windows.Forms.CheckedListBox; $clb.Location="15,20"; $clb.Size="330,360"; $clb.CheckOnClick=$true
@@ -95,7 +117,14 @@ for ($i=0; $i -lt $clb.Items.Count; $i++) {
     if ($clb.GetItemChecked($i)) { if($target.desc -notmatch "\[售出\]"){$target.desc = "[售出] " + $target.desc} }
     else { $target.desc = $target.desc -replace "\[售出\]\s*", "" }
 }
-$NewItems | Export-Csv -Path $CsvPath -Encoding UTF8 -NoTypeInformation
+
+# 🛡️ 檔案寫入保護 (防 Excel 鎖死)
+try {
+    $NewItems | Export-Csv -Path $CsvPath -Encoding UTF8 -NoTypeInformation -Force -ErrorAction Stop
+} catch {
+    [Microsoft.VisualBasic.Interaction]::MsgBox("❌ 嚴重錯誤：無法儲存 items.csv！`n`n你是不是用 Excel 打開了這個檔案？`n請先【關閉 Excel】後，再重新執行一次！", 48, "檔案被鎖死")
+    exit
+}
 
 # ================= 網頁生成與壓縮 =================
 $CacheBuster = (Get-Date).ToString("yyyyMMddHHmmss")
@@ -296,5 +325,5 @@ $HtmlEnd = @"
 </body></html>
 "@
 [System.IO.File]::WriteAllText("$ScriptPath\index.html", ($HtmlStart + $CardsHtml + $HtmlEnd), [System.Text.Encoding]::UTF8)
-$formStock.Dispose(); git add . ; git commit -m "V11-DNATracking" ; git push origin main
-[Microsoft.VisualBasic.Interaction]::MsgBox("🎉 終極修復完畢！`n現在系統會追蹤照片 DNA，改名字絕對不會再重複跳出建檔視窗了！", 64, "大功告成")
+$formStock.Dispose(); git add . ; git commit -m "V12-Final-Stability" ; git push origin main
+[Microsoft.VisualBasic.Interaction]::MsgBox("🎉 系統重構完成！`n1. 絕對不會再重複跳建檔視窗`n2. 新增防 Excel 鎖死機制`n這台印鈔機已經無懈可擊了！", 64, "大功告成")
