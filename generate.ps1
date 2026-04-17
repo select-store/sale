@@ -16,7 +16,7 @@ $ShopDesc  = "全新與二手好物特賣，點擊進來挖寶！"
 $SiteUrl   = "https://select-store.github.io/sale/" 
 # =========================================
 
-# 1. 讀取舊資料庫 (建立對應表)
+# 1. 讀取舊資料庫
 $ExistingItems = @()
 $ExistingMap = @{}
 if (Test-Path $CsvPath) {
@@ -29,7 +29,7 @@ if (Test-Path $CsvPath) {
     }
 }
 
-# 2. 建立 DNA 記憶字典 (用照片檔名認商品)
+# 2. 建立 DNA 記憶字典 (極限配對)
 $DnaMap = @{}
 foreach ($Item in $ExistingItems) {
     if (-not [string]::IsNullOrWhiteSpace($Item.image)) {
@@ -65,7 +65,7 @@ foreach ($Photo in $Photos) {
     $GroupedProducts[$ProductName] += $Photo.FullName
 }
 
-# 4. 核心比對與建檔邏輯 (支援自動帶入舊資料)
+# 4. 核心比對與建檔邏輯 (還原極致順暢流程)
 $NewItems = @()
 $ProcessedNames = @{} 
 
@@ -74,15 +74,16 @@ foreach ($Key in $GroupedProducts.Keys) {
     $GroupedFileNames = $GroupedImages | ForEach-Object { [System.IO.Path]::GetFileName($_).ToLower() }
     
     $MatchedItem = $null
-    # 找尋是否為已知照片
+    
+    # DNA 配對：如果之前存過這張照片，直接沿用不囉嗦！
     foreach ($fname in $GroupedFileNames) {
         if ($DnaMap.ContainsKey($fname)) { $MatchedItem = $DnaMap[$fname]; break }
     }
-    # 備案：如果檔名剛好跟舊商品名稱一樣
+    # 備案配對：檔名剛好等於舊商品名
     if ($null -eq $MatchedItem -and $ExistingMap.ContainsKey($Key)) { $MatchedItem = $ExistingMap[$Key] }
     
     if ($null -ne $MatchedItem) {
-        # 認識的商品：自動收編新照片，不彈出視窗
+        # 【老朋友靜默處理】直接繼承舊資料，更新圖片路徑，不彈任何視窗！
         if (-not $ProcessedNames.ContainsKey($MatchedItem.name)) {
             $OldImages = if($MatchedItem.image) { $MatchedItem.image -split '\|' } else { @() }
             $MergedImages = $OldImages + $GroupedImages | Select-Object -Unique
@@ -91,53 +92,54 @@ foreach ($Key in $GroupedProducts.Keys) {
             $ProcessedNames[$MatchedItem.name] = $true
         }
     } else {
-        # ⚠️ 完全不認識的全新照片：啟動【智慧綁定視窗】
+        # 【全新商品建檔】乾淨俐落，不再問你要不要綁定！
         $formIn = New-Object System.Windows.Forms.Form
-        $formIn.Text = "🆕 發現新照片：$Key"; $formIn.Size = New-Object System.Drawing.Size(420, 620); $formIn.StartPosition = "CenterScreen"; $formIn.Font = New-Object System.Drawing.Font("微軟正黑體", 10)
-        $startX = 20; $boxWidth = 360
+        $formIn.Text = "🆕 新商品建檔：$Key"; $formIn.Size = New-Object System.Drawing.Size(400, 520); $formIn.StartPosition = "CenterScreen"; $formIn.Font = New-Object System.Drawing.Font("微軟正黑體", 10)
+        $startX = 20; $boxWidth = 340
         
         $addLbl = { param($t, $y) $l = New-Object System.Windows.Forms.Label; $l.Text=$t; $l.Location=New-Object System.Drawing.Point($startX, $y); $l.AutoSize=$true; $formIn.Controls.Add($l) }
         $addTxt = { param($v, $y, $h=30) $t = New-Object System.Windows.Forms.TextBox; $t.Text=$v; $t.Location=New-Object System.Drawing.Point($startX, ($y+22)); $t.Size=New-Object System.Drawing.Size($boxWidth, $h); if($h -gt 30){$t.Multiline=$true}; $formIn.Controls.Add($t); return $t }
         
-        &$addLbl "💡 這是新商品，還是要加入現有商品？" 10
+        &$addLbl "商品名稱 (Name)" 10;   $tName = &$addTxt $Key 10
+        &$addLbl "原價 (Price)" 75;      $tPrice = &$addTxt "100" 75
+        &$addLbl "特價 (Sale Price - 選填)" 140; $tSale = &$addTxt "" 140
+        &$addLbl "商品描述 (Description)" 205;   $tDesc = &$addTxt "全新/二手出清。" 205 80
+        &$addLbl "參考網址 (URL - 選填)" 320;    $tUrl = &$addTxt "" 320
+        
+        # （隱藏機關）如果你真的需要幫舊商品補照片，勾選這個才會出現下拉選單
+        $chkBind = New-Object System.Windows.Forms.CheckBox
+        $chkBind.Text = "進階：這張照片屬於架上的舊商品"
+        $chkBind.Location = New-Object System.Drawing.Point($startX, 390)
+        $chkBind.Size = New-Object System.Drawing.Size($boxWidth, 25)
+        $formIn.Controls.Add($chkBind)
+
         $cmb = New-Object System.Windows.Forms.ComboBox
-        $cmb.Location = New-Object System.Drawing.Point($startX, 32)
+        $cmb.Location = New-Object System.Drawing.Point($startX, 420)
         $cmb.Size = New-Object System.Drawing.Size($boxWidth, 30)
         $cmb.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
-        $cmb.Items.Add("✨ [建立全新商品]") | Out-Null
+        $cmb.Visible = $false
         foreach ($name in $ExistingMap.Keys) { $cmb.Items.Add($name) | Out-Null }
-        $cmb.SelectedIndex = 0
+        if ($cmb.Items.Count -gt 0) { $cmb.SelectedIndex = 0 }
         $formIn.Controls.Add($cmb)
 
-        &$addLbl "商品名稱 (Name)" 75;   $tName = &$addTxt $Key 75
-        &$addLbl "原價 (Price)" 140;      $tPrice = &$addTxt "100" 140
-        &$addLbl "特價 (Sale Price - 選填)" 205; $tSale = &$addTxt "" 205
-        &$addLbl "商品描述 (Description)" 270;   $tDesc = &$addTxt "全新/二手出清。" 270 80
-        &$addLbl "參考網址 (URL - 選填)" 385;    $tUrl = &$addTxt "" 385
-        
-        # 下拉選單連動機制：選擇舊商品自動填寫
-        $cmb.add_SelectedIndexChanged({
-            if ($cmb.SelectedIndex -eq 0) {
-                $tName.Text = $Key; $tPrice.Text = "100"; $tSale.Text = ""; $tDesc.Text = "全新/二手出清。"; $tUrl.Text = ""
-                $tName.Enabled = $true
+        $chkBind.add_CheckedChanged({
+            $cmb.Visible = $chkBind.Checked
+            if ($chkBind.Checked -and $cmb.Items.Count -gt 0) {
+                $tName.Enabled = $false; $tPrice.Enabled = $false; $tSale.Enabled = $false; $tDesc.Enabled = $false; $tUrl.Enabled = $false
             } else {
-                $selName = $cmb.SelectedItem.ToString()
-                $oldData = $ExistingMap[$selName]
-                $tName.Text = $oldData.name; $tPrice.Text = $oldData.price; $tSale.Text = $oldData.sale_price; $tDesc.Text = $oldData.desc; $tUrl.Text = $oldData.url
-                $tName.Enabled = $false # 鎖定名稱，避免改壞原本的資料庫
+                $tName.Enabled = $true; $tPrice.Enabled = $true; $tSale.Enabled = $true; $tDesc.Enabled = $true; $tUrl.Enabled = $true
             }
         })
 
-        $btnSave = New-Object System.Windows.Forms.Button; $btnSave.Text="💾 儲存並繼續"; $btnSave.Location="130,480"; $btnSave.Size="150,45"; $btnSave.BackColor="LightBlue"; $btnSave.DialogResult="OK"
+        $btnSave = New-Object System.Windows.Forms.Button; $btnSave.Text="💾 儲存並繼續"; $btnSave.Location="120,460"; $btnSave.Size="150,45"; $btnSave.BackColor="LightBlue"; $btnSave.DialogResult="OK"
         $formIn.Controls.Add($btnSave); $formIn.AcceptButton = $btnSave
         
+        # 為了容納隱藏機關，視窗高度動態調整
+        $formIn.Size = New-Object System.Drawing.Size(400, 560)
+
         if ($formIn.ShowDialog() -eq "OK") { 
-            if ($cmb.SelectedIndex -eq 0) {
-                $newItem = [PSCustomObject]@{ name=$tName.Text; price=$tPrice.Text; sale_price=$tSale.Text; desc=$tDesc.Text; url=$tUrl.Text; image=($GroupedImages -join "|") }
-                $NewItems += $newItem
-                $ProcessedNames[$newItem.name] = $true
-                $ExistingMap[$newItem.name] = $newItem
-            } else {
+            if ($chkBind.Checked -and $cmb.Items.Count -gt 0) {
+                # 執行綁定舊商品邏輯
                 $selName = $cmb.SelectedItem.ToString()
                 $targetItem = $ExistingMap[$selName]
                 $OldImages = if($targetItem.image) { $targetItem.image -split '\|' } else { @() }
@@ -148,6 +150,12 @@ foreach ($Key in $GroupedProducts.Keys) {
                     $NewItems += $targetItem
                     $ProcessedNames[$targetItem.name] = $true
                 }
+            } else {
+                # 預設流程：建立全新商品
+                $newItem = [PSCustomObject]@{ name=$tName.Text; price=$tPrice.Text; sale_price=$tSale.Text; desc=$tDesc.Text; url=$tUrl.Text; image=($GroupedImages -join "|") }
+                $NewItems += $newItem
+                $ProcessedNames[$newItem.name] = $true
+                $ExistingMap[$newItem.name] = $newItem
             }
         } else { exit }
         $formIn.Dispose()
@@ -385,5 +393,5 @@ $HtmlEnd = @"
 </body></html>
 "@
 [System.IO.File]::WriteAllText("$ScriptPath\index.html", ($HtmlStart + $CardsHtml + $HtmlEnd), [System.Text.Encoding]::UTF8)
-$formStock.Dispose(); git add . ; git commit -m "V15-SmartBind" ; git push origin main
-[Microsoft.VisualBasic.Interaction]::MsgBox("🎉 智慧綁定模組啟動完畢！`n以後放新照片，直接下拉選單綁定舊商品，絕對不用重填！", 64, "大功告成")
+$formStock.Dispose(); git add . ; git commit -m "V16-SmoothFlow" ; git push origin main
+[Microsoft.VisualBasic.Interaction]::MsgBox("🎉 流程還原完畢！`n現在新照片丟進去，預設直接當新商品建檔，絕不囉唆！", 64, "大功告成")
