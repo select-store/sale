@@ -30,32 +30,52 @@ foreach ($Photo in $Photos) {
     $GroupedProducts[$ProductName] += $Photo.FullName
 }
 
-# 讀取資料庫
-$ExistingData = @{}
+# 讀取舊資料庫 (改為陣列格式以支援 DNA 追蹤)
+$ExistingItems = @()
 if (Test-Path $CsvPath) {
-    $OldItems = Import-Csv -Path $CsvPath -Encoding UTF8
-    foreach ($Item in $OldItems) { $ExistingData[$Item.name] = $Item }
+    $ExistingItems = Import-Csv -Path $CsvPath -Encoding UTF8
 }
 
-# 🚀 專業版建檔介面 (排版校正)
+# 🚀 專業版建檔介面 (導入 DNA 照片追蹤，徹底解決重複彈出問題)
 $NewItems = @()
 foreach ($Key in $GroupedProducts.Keys) {
-    if ($ExistingData.ContainsKey($Key)) {
-        $NewItems += $ExistingData[$Key]
+    $GroupedImages = $GroupedProducts[$Key]
+    
+    # 取出這組照片的「純檔名」作為 DNA
+    $GroupedFileNames = $GroupedImages | ForEach-Object { [System.IO.Path]::GetFileName($_) }
+    
+    # 尋找舊資料庫中，是否有任何商品的圖片 DNA 跟現在這組相符
+    $MatchedItem = $null
+    foreach ($OldItem in $ExistingItems) {
+        $OldItemFileNames = $OldItem.image -split '\|' | ForEach-Object { [System.IO.Path]::GetFileName($_ -replace '/', '\') }
+        $Intersection = $GroupedFileNames | Where-Object { $OldItemFileNames -contains $_ }
+        if ($Intersection.Count -gt 0) {
+            $MatchedItem = $OldItem
+            break
+        }
+    }
+
+    if ($null -ne $MatchedItem) {
+        # 找到舊資料！即使名字改過，也沿用舊資料，並更新最新圖片路徑
+        $MatchedItem.image = ($GroupedImages -join "|")
+        $NewItems += $MatchedItem
     } else {
+        # 真的找不到，才是全新商品，跳出建檔視窗
         $formIn = New-Object System.Windows.Forms.Form
         $formIn.Text = "🆕 新商品建檔：$Key"; $formIn.Size = New-Object System.Drawing.Size(400, 550); $formIn.StartPosition = "CenterScreen"; $formIn.Font = New-Object System.Drawing.Font("微軟正黑體", 10)
         $startX = 20; $boxWidth = 340
         $addLbl = { param($t, $y) $l = New-Object System.Windows.Forms.Label; $l.Text=$t; $l.Location=New-Object System.Drawing.Point($startX, $y); $l.AutoSize=$true; $formIn.Controls.Add($l) }
         $addTxt = { param($v, $y, $h=30) $t = New-Object System.Windows.Forms.TextBox; $t.Text=$v; $t.Location=New-Object System.Drawing.Point($startX, ($y+22)); $t.Size=New-Object System.Drawing.Size($boxWidth, $h); if($h -gt 30){$t.Multiline=$true}; $formIn.Controls.Add($t); return $t }
+        
         &$addLbl "商品名稱 (Name)" 10;   $tName = &$addTxt $Key 10
         &$addLbl "原價 (Price)" 75;      $tPrice = &$addTxt "100" 75
         &$addLbl "特價 (Sale Price - 選填)" 140; $tSale = &$addTxt "" 140
         &$addLbl "商品描述 (Description)" 205;   $tDesc = &$addTxt "全新/二手出清。" 205 80
         &$addLbl "參考網址 (URL - 選填)" 320;    $tUrl = &$addTxt "" 320
+        
         $btnSave = New-Object System.Windows.Forms.Button; $btnSave.Text="💾 儲存並繼續"; $btnSave.Location="120,420"; $btnSave.Size="150,45"; $btnSave.BackColor="LightBlue"; $btnSave.DialogResult="OK"
         $formIn.Controls.Add($btnSave); $formIn.AcceptButton = $btnSave
-        if ($formIn.ShowDialog() -eq "OK") { $NewItems += [PSCustomObject]@{ name=$tName.Text; price=$tPrice.Text; sale_price=$tSale.Text; desc=$tDesc.Text; url=$tUrl.Text; image=($GroupedProducts[$Key] -join "|") } } else { exit }
+        if ($formIn.ShowDialog() -eq "OK") { $NewItems += [PSCustomObject]@{ name=$tName.Text; price=$tPrice.Text; sale_price=$tSale.Text; desc=$tDesc.Text; url=$tUrl.Text; image=($GroupedImages -join "|") } } else { exit }
         $formIn.Dispose()
     }
 }
@@ -100,13 +120,11 @@ $HtmlStart = @"
     <meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
     <title>$ShopTitle</title>
     <script>
-        // 🚀 網頁本體刷新邏輯：比對版本號，不一致就強制 Hard Reload
         (function() {
             const currentVersion = '$CacheBuster';
             const savedVersion = localStorage.getItem('shop_version');
             if (savedVersion !== currentVersion) {
                 localStorage.setItem('shop_version', currentVersion);
-                // 加上隨機參數並強制重刷，繞過所有快取
                 const cleanUrl = window.location.origin + window.location.pathname + '?refresh=' + currentVersion;
                 window.location.replace(cleanUrl);
             }
@@ -115,34 +133,44 @@ $HtmlStart = @"
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #eee; margin: 0; }
         .search-container { padding: 10px; background: #1e1e1e; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #333; }
-        #searchInput { width: 100%; max-width: 800px; margin: 0 auto; display: block; padding: 12px 20px; border: 1px solid #444; border-radius: 25px; background: #222; color: #fff; box-sizing: border-box; }
+        #searchInput { width: 100%; max-width: 800px; margin: 0 auto; display: block; padding: 14px 20px; border: 1px solid #444; border-radius: 25px; background: #222; color: #fff; box-sizing: border-box; font-size: 1rem; }
         .filter-container { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding: 15px 10px; }
         .filter-btn { background: #333; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; color: #ccc; font-size: 0.9rem; }
         .filter-btn.active { background: #3498db; color: white; }
-        .grid-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 12px; max-width: 1600px; margin: 0 auto; }
-        @media (min-width: 768px) { .grid-container { grid-template-columns: repeat(4, 1fr); gap: 15px; } }
-        @media (min-width: 1200px) { .grid-container { grid-template-columns: repeat(6, 1fr); gap: 18px; } }
-        .card { background: #1e1e1e; display: flex; flex-direction: column; padding: 12px; border-radius: 12px; border: 1px solid #333; }
-        .main-img-container { width: 100%; aspect-ratio: 1/1; position: relative; overflow: hidden; background: #2c2c2c; border-radius: 8px; cursor: zoom-in; }
+        
+        .grid-container { display: grid; grid-template-columns: 1fr; gap: 16px; padding: 16px; max-width: 1600px; margin: 0 auto; }
+        @media (min-width: 550px) { .grid-container { grid-template-columns: repeat(2, 1fr); gap: 16px; } }
+        @media (min-width: 850px) { .grid-container { grid-template-columns: repeat(4, 1fr); gap: 20px; } }
+        @media (min-width: 1200px) { .grid-container { grid-template-columns: repeat(6, 1fr); gap: 24px; } }
+        
+        .card { background: #1e1e1e; display: flex; flex-direction: column; height: 100%; padding: 16px; border-radius: 12px; border: 1px solid #333; box-sizing: border-box; }
+        .main-img-container { width: 100%; aspect-ratio: 1/1; position: relative; overflow: hidden; background: #2c2c2c; border-radius: 8px; cursor: zoom-in; margin-bottom: 10px; }
         .main-img { width: 100%; height: 100%; object-fit: contain; }
-        .sold-badge { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); background: rgba(231, 76, 60, 0.95); color: white; padding: 6px 16px; font-weight: bold; border-radius: 6px; z-index: 10; border: 2px solid white; pointer-events: none; }
+        .sold-badge { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); background: rgba(231, 76, 60, 0.95); color: white; padding: 8px 20px; font-weight: bold; border-radius: 6px; z-index: 10; border: 2px solid white; pointer-events: none; letter-spacing: 2px; }
         .sold-out .sold-badge { display: block; }
         .sold-out .main-img { filter: grayscale(100%); opacity: 0.4; }
-        .thumb-container { display: flex; gap: 4px; padding: 4px 0; overflow-x: auto; }
-        .thumb-img { width: 38px; height: 38px; object-fit: cover; border-radius: 4px; cursor: pointer; opacity: 0.5; }
-        .thumb-img:hover { opacity: 1; border: 1px solid #3498db; }
-        .info { flex-grow: 1; display: flex; flex-direction: column; margin-top: 8px; }
-        h3 { margin: 0; font-size: 1rem; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .price-container { margin: 5px 0; }
-        .price { color: #e74c3c; font-weight: bold; font-size: 1.1rem; }
-        .old-price { color: #777; text-decoration: line-through; font-size: 0.85rem; margin-right: 6px; }
-        .new-price { color: #e74c3c; font-weight: bold; background: rgba(231, 76, 60, 0.15); padding: 2px 6px; border-radius: 4px; }
-        .desc { font-size: 0.85rem; color: #aaa; margin: 5px 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-        .ref-link { font-size: 0.85rem; color: #3498db; text-decoration: none; font-weight: bold; margin-top: auto; }
-        .btn-copy { background: #3498db; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        
+        .thumb-container { display: flex; gap: 6px; padding: 4px 0; overflow-x: auto; }
+        .thumb-img { width: 42px; height: 42px; object-fit: cover; border-radius: 6px; cursor: pointer; opacity: 0.5; border: 2px solid transparent; }
+        .thumb-img:hover, .thumb-img.active { opacity: 1; border-color: #3498db; }
+
+        .info { flex-grow: 1; display: flex; flex-direction: column; margin-top: 10px; }
+        h3 { margin: 0 0 8px 0; font-size: 1.1rem; color: #fff; line-height: 1.3; }
+        .price-container { margin-bottom: 8px; }
+        .price { color: #e74c3c; font-weight: bold; font-size: 1.2rem; }
+        .old-price { color: #777; text-decoration: line-through; font-size: 0.9rem; margin-right: 8px; }
+        .new-price { color: #e74c3c; font-weight: bold; font-size: 1.2rem; background: rgba(231, 76, 60, 0.15); padding: 2px 8px; border-radius: 4px; }
+        .desc { font-size: 0.9rem; color: #aaa; margin: 0 0 12px 0; line-height: 1.5; }
+        
+        .ref-link { font-size: 0.85rem; color: #3498db; text-decoration: none; font-weight: bold; margin-top: auto; display: inline-block; padding-top: 8px; border-top: 1px dashed #444; }
+        
+        .btn-copy { background: #3498db; color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem; width: 100%; margin-top: 16px; transition: background 0.2s; }
+        .btn-copy:hover { background: #2980b9; }
+
         .floating-line { position: fixed; bottom: 30px; right: 30px; background: #06C755; color: white; padding: 14px 24px; border-radius: 50px; text-decoration: none; font-weight: bold; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-        #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 999; justify-content: center; align-items: center; }
-        #lightbox img { max-width: 95%; max-height: 95%; object-fit: contain; }
+        #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 999; justify-content: center; align-items: center; flex-direction: column; }
+        #lightbox img { max-width: 95%; max-height: 90vh; object-fit: contain; }
+        #loading-text { color: white; font-weight: bold; margin-bottom: 20px; font-size: 1.2rem; display: none; }
     </style>
 </head><body>
     <div class="search-container"><input type="text" id="searchInput" placeholder="🔍 搜尋商品或描述..."></div>
@@ -170,7 +198,7 @@ foreach ($Item in $NewItems) {
         $FinalPrice = $Item.price
     }
 
-    $UrlHtml = if (![string]::IsNullOrWhiteSpace($Item.url)) { "<a href=`"$($Item.url)`" target=`"_blank`" class=`"ref-link`">🔗 參考網址</a>" } else { "" }
+    $UrlHtml = if (![string]::IsNullOrWhiteSpace($Item.url)) { "<a href=`"$($Item.url)`" target=`"_blank`" class=`"ref-link`">🔗 點此查看原廠參考網址</a>" } else { "" }
 
     $ImgPaths = $Item.image -split '\|'
     $Base64List = @(); $HighResList = @()
@@ -187,14 +215,19 @@ foreach ($Item in $NewItems) {
         $ThumbHtml += "</div>"
     }
 
-    $BtnAction = if ($IsSold) { "alert('🚫 賣完囉！')" } else { "copyInfo('$($Item.name)', '$FinalPrice', this)" }
+    $BtnAction = if ($IsSold) { "alert('🚫 賣完囉！下次請早！')" } else { "copyInfo('$($Item.name)', '$FinalPrice', this)" }
     $BtnText = if ($IsSold) { "🚫 已售出" } else { "📋 複製購買資訊" }
 
     $CardsHtml += @"
     <div class="$CardClass" data-tags="$StatusTag $($Item.desc) $($Item.name)">
         <div class="main-img-container" onclick="openBox(this.querySelector('.main-img'))"><div class="sold-badge">已售出</div><img class="main-img" src="$($Base64List[0])" data-highres="$($HighResList[0])"></div>
         $ThumbHtml
-        <div class="info"><h3>$($Item.name)</h3>$PriceHtml<p class="desc">$($Item.desc)</p>$UrlHtml</div>
+        <div class="info">
+            <h3>$($Item.name)</h3>
+            $PriceHtml
+            <p class="desc">$($Item.desc)</p>
+            $UrlHtml
+        </div>
         <button class="btn-copy" onclick="$BtnAction">$BtnText</button>
     </div>
 "@
@@ -203,14 +236,40 @@ foreach ($Item in $NewItems) {
 $HtmlEnd = @"
     </div>
     <a href="$LineLink" class="floating-line" target="_blank">💬 聯繫我 (LINE)</a>
-    <div id="lightbox" onclick="this.style.display='none'"><img id="box-img"></div>
+    
+    <div id="lightbox" onclick="this.style.display='none'">
+        <div id="loading-text">🔄 正在連線下載高清原圖...</div>
+        <img id="box-img">
+    </div>
+    
     <script>
-        function changeImg(t){ let m = t.closest('.card').querySelector('.main-img'); m.src=t.src; m.setAttribute('data-highres', t.getAttribute('data-highres')); }
+        function changeImg(t){ 
+            let m = t.closest('.card').querySelector('.main-img'); 
+            m.src=t.src; 
+            m.setAttribute('data-highres', t.getAttribute('data-highres')); 
+        }
         function openBox(img){ 
-            let box = document.getElementById('lightbox'); let bImg = document.getElementById('box-img'); let hr = img.getAttribute('data-highres');
-            box.style.display='flex'; bImg.src = img.src; if(hr){ let tmp = new Image(); tmp.onload = () => bImg.src=hr; tmp.src=hr; }
+            let box = document.getElementById('lightbox'); 
+            let bImg = document.getElementById('box-img'); 
+            let loader = document.getElementById('loading-text');
+            let hr = img.getAttribute('data-highres');
+            
+            box.style.display='flex'; 
+            bImg.style.display='none';
+            
+            if(hr){ 
+                loader.style.display='block';
+                let tmp = new Image(); 
+                tmp.onload = () => { bImg.src=hr; loader.style.display='none'; bImg.style.display='block'; }; 
+                tmp.onerror = () => { bImg.src=img.src; loader.style.display='none'; bImg.style.display='block'; };
+                tmp.src=hr; 
+            } else {
+                bImg.src=img.src;
+                bImg.style.display='block';
+            }
         }
         function copyInfo(n, p, b){
+            event.stopPropagation();
             navigator.clipboard.writeText('【我要購買】'+n+'\n金額：NT$ '+p).then(() => {
                 let old = b.innerText; b.innerText = '✅ 已複製！'; b.style.background = '#27ae60';
                 setTimeout(() => { b.innerText = old; b.style.background = '#3498db'; }, 2000);
@@ -237,5 +296,5 @@ $HtmlEnd = @"
 </body></html>
 "@
 [System.IO.File]::WriteAllText("$ScriptPath\index.html", ($HtmlStart + $CardsHtml + $HtmlEnd), [System.Text.Encoding]::UTF8)
-$formStock.Dispose(); git add . ; git commit -m "V9.2-UltimateCacheKill" ; git push origin main
-[Microsoft.VisualBasic.Interaction]::MsgBox("🎉 終極快取殺手已部署！`n以後發布完，點開網址它會自動閃一下重刷，保證最新！", 64, "大功告成")
+$formStock.Dispose(); git add . ; git commit -m "V11-DNATracking" ; git push origin main
+[Microsoft.VisualBasic.Interaction]::MsgBox("🎉 終極修復完畢！`n現在系統會追蹤照片 DNA，改名字絕對不會再重複跳出建檔視窗了！", 64, "大功告成")
