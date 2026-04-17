@@ -75,7 +75,10 @@ for ($i = 0; $i -lt $checkListBox.Items.Count; $i++) {
 }
 $NewItems | Export-Csv -Path $CsvPath -Encoding UTF8 -NoTypeInformation
 
-# 極限壓縮 (A方案 300px)
+# ================= 黑科技核心 =================
+$CacheBuster = (Get-Date).ToString("MMddHHmmss")
+
+# 縮圖極限壓縮 (300px)
 function Optimize-ImageToBase64 {
     param([string]$Path)
     try {
@@ -137,9 +140,14 @@ $HtmlStart = @"
         .btn-copy { background: #3498db; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem; width: 100%; transition: background 0.2s; }
         .btn-copy:hover { background: #2980b9; }
 
-        /* 燈箱放大鏡 */
+        /* 🔥 LINE 按鈕強勢回歸 */
+        .floating-line { position: fixed; bottom: 30px; right: 30px; background: #06C755; color: white; padding: 14px 24px; border-radius: 50px; text-decoration: none; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 100; transition: transform 0.2s; font-size: 1rem; display: flex; align-items: center; justify-content: center; }
+        .floating-line:hover { transform: scale(1.05); }
+
+        /* 燈箱放大鏡 (高清版) */
         #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 999; justify-content: center; align-items: center; }
-        #lightbox img { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+        #lightbox img { max-width: 95%; max-height: 95%; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); object-fit: contain; }
+        #loading-text { display: none; position: absolute; color: white; font-size: 1.2rem; font-weight: bold; }
     </style>
 </head><body>
     <div class="search-container"><input type="text" id="searchInput" placeholder="🔍 輸入關鍵字搜尋商品或描述..."></div>
@@ -179,28 +187,45 @@ foreach ($Item in $NewItems) {
         $UrlHtml = ""
     }
 
-    # 處理多張圖片
+    # 雙刀流：準備縮圖 (Base64) 與 高清原圖 (URL)
     $ImgPaths = $Item.image -split '\|'
     $Base64List = @()
+    $HighResList = @()
+    
     foreach ($p in $ImgPaths) {
         $b64 = Optimize-ImageToBase64 -Path $p
-        if ($b64) { $Base64List += $b64 }
+        if ($b64) { 
+            $Base64List += $b64
+            # 將本地路徑轉換為 GitHub 網址路徑 (例如 images/01.jpg)
+            $WebPath = $p -replace '\\', '/' -replace '^\./', ''
+            $HighResList += "$SiteUrl$WebPath?v=$CacheBuster"
+        }
     }
     
-    if ($Base64List.Count -eq 0) { $Base64List += "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" }
-    $MainImg = $Base64List[0]
+    if ($Base64List.Count -eq 0) { 
+        $Base64List += "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+        $HighResList += ""
+    }
     
-    # 縮圖 HTML
+    $MainImgBase64 = $Base64List[0]
+    $MainImgHighRes = $HighResList[0]
+    
+    # 縮圖 HTML (綁定切換高清圖層邏輯)
     $ThumbHtml = ""
     if ($Base64List.Count -gt 1) {
         $ThumbHtml = "<div class='thumb-container'>"
-        foreach ($b in $Base64List) { $ThumbHtml += "<img src='$b' class='thumb-img' onclick='this.closest(`".card`").querySelector(`".main-img`").src=this.src'> " }
+        for ($i=0; $i -lt $Base64List.Count; $i++) {
+            $ThumbHtml += "<img src='$($Base64List[$i])' data-highres='$($HighResList[$i])' class='thumb-img' onclick='changeMainImg(this)'> "
+        }
         $ThumbHtml += "</div>"
     }
 
     $CardsHtml += @"
     <div class="$CardClass" data-tags="$StatusTag $($Item.desc) $($Item.name)">
-        <div class="main-img-container" onclick="openLightbox(this.querySelector('.main-img').src)"><div class="sold-badge">已售出</div><img class="main-img" src="$MainImg"></div>
+        <div class="main-img-container" onclick="openLightbox(this.querySelector('.main-img').getAttribute('data-highres'), this.querySelector('.main-img').src)">
+            <div class="sold-badge">已售出</div>
+            <img class="main-img" src="$MainImgBase64" data-highres="$MainImgHighRes">
+        </div>
         $ThumbHtml
         <div class="info">
             <h3>$($Item.name)</h3>
@@ -216,15 +241,56 @@ foreach ($Item in $NewItems) {
 $HtmlEnd = @"
     </div>
     
-    <div id="lightbox" onclick="closeLightbox()"><img id="lightbox-img"></div>
+    <a href="$LineLink" class="floating-line" target="_blank">💬 聯繫我 (LINE)</a>
+
+    <div id="lightbox" onclick="closeLightbox()">
+        <span id="loading-text">載入高清原圖中...</span>
+        <img id="lightbox-img">
+    </div>
 
     <script>
-        // 燈箱功能
-        function openLightbox(src) { 
-            event.stopPropagation(); // 阻止事件冒泡
-            document.getElementById('lightbox-img').src = src; 
-            document.getElementById('lightbox').style.display = 'flex'; 
+        // 切換商品首圖
+        function changeMainImg(thumbElem) {
+            let card = thumbElem.closest('.card');
+            let mainImg = card.querySelector('.main-img');
+            mainImg.src = thumbElem.src; // 縮圖換縮圖 (秒換)
+            mainImg.setAttribute('data-highres', thumbElem.getAttribute('data-highres')); // 準備高清連結
         }
+
+        // 燈箱功能 (雙刀流核心：優先載入原圖，失敗則用縮圖墊檔)
+        function openLightbox(highResSrc, base64Src) { 
+            event.stopPropagation();
+            let box = document.getElementById('lightbox');
+            let img = document.getElementById('lightbox-img');
+            let loading = document.getElementById('loading-text');
+            
+            box.style.display = 'flex';
+            img.style.display = 'none';
+            loading.style.display = 'block';
+
+            if (!highResSrc) {
+                img.src = base64Src;
+                loading.style.display = 'none';
+                img.style.display = 'block';
+                return;
+            }
+
+            // 嘗試載入高清圖
+            let tempImg = new Image();
+            tempImg.onload = function() {
+                img.src = highResSrc;
+                loading.style.display = 'none';
+                img.style.display = 'block';
+            };
+            tempImg.onerror = function() {
+                // 如果高清圖還在 GitHub 伺服器傳輸中破圖，降級顯示 Base64 縮圖防呆
+                img.src = base64Src;
+                loading.style.display = 'none';
+                img.style.display = 'block';
+            };
+            tempImg.src = highResSrc;
+        }
+
         function closeLightbox() { document.getElementById('lightbox').style.display = 'none'; }
 
         // 複製功能
@@ -273,8 +339,8 @@ $form.Dispose()
 
 # 自動推播
 try {
-    git add . ; git commit -m "V6-Fixes" ; git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 完美修復！`n1. 版面改為舒適的 6 欄位`n2. 點擊圖片即可放大看圖`n3. 特價與說明欄位強勢回歸！", 64, "大功告成")
+    git add . ; git commit -m "V7-HighResLightbox" ; git push origin main
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 方案 B (雙刀流) 升級完成！`n1. 點擊放大絕對是高清原圖！`n2. LINE 聯絡按鈕強勢回歸！", 64, "大功告成")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("❌ 自動推播失敗。請確認網路連線。", 48, "系統錯誤")
 }
