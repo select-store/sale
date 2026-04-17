@@ -37,26 +37,29 @@ if (Test-Path $CsvPath) {
     foreach ($Item in $OldItems) { $ExistingData[$Item.name] = $Item }
 }
 
-# 🚀 核心升級：新商品一站式輸入介面
+# 🚀 專業版建檔介面 (修正排版位移)
 $NewItems = @()
 foreach ($Key in $GroupedProducts.Keys) {
     if ($ExistingData.ContainsKey($Key)) {
         $NewItems += $ExistingData[$Key]
     } else {
-        # 建立專屬輸入視窗
         $formIn = New-Object System.Windows.Forms.Form
-        $formIn.Text = "🆕 新商品建檔：$Key"; $formIn.Size = New-Object System.Drawing.Size(400, 520); $formIn.StartPosition = "CenterScreen"; $formIn.Font = New-Object System.Drawing.Font("微軟正黑體", 10)
+        $formIn.Text = "🆕 新商品建檔：$Key"; $formIn.Size = New-Object System.Drawing.Size(400, 550); $formIn.StartPosition = "CenterScreen"; $formIn.Font = New-Object System.Drawing.Font("微軟正黑體", 10)
 
-        $addLbl = { param($t, $y) $l = New-Object System.Windows.Forms.Label; $l.Text=$t; $l.Location="15,$y"; $l.AutoSize=$true; $formIn.Controls.Add($l) }
-        $addTxt = { param($v, $y, $h=30) $t = New-Object System.Windows.Forms.TextBox; $t.Text=$v; $t.Location="15,$($y+20)"; $t.Size="350,$h"; if($h -gt 30){$t.Multiline=$true}; $formIn.Controls.Add($t); return $t }
+        # 排版輔助函數
+        $startX = 20
+        $boxWidth = 340
+        
+        $addLbl = { param($t, $y) $l = New-Object System.Windows.Forms.Label; $l.Text=$t; $l.Location=New-Object System.Drawing.Point($startX, $y); $l.AutoSize=$true; $formIn.Controls.Add($l) }
+        $addTxt = { param($v, $y, $h=30) $t = New-Object System.Windows.Forms.TextBox; $t.Text=$v; $t.Location=New-Object System.Drawing.Point($startX, ($y+22)); $t.Size=New-Object System.Drawing.Size($boxWidth, $h); if($h -gt 30){$t.Multiline=$true}; $formIn.Controls.Add($t); return $t }
 
         &$addLbl "商品名稱 (Name)" 10;   $tName = &$addTxt $Key 10
-        &$addLbl "原價 (Price)" 70;      $tPrice = &$addTxt "100" 70
-        &$addLbl "特價 (Sale Price - 選填)" 130; $tSale = &$addTxt "" 130
-        &$addLbl "商品描述 (Description)" 190;   $tDesc = &$addTxt "全新/二手出清。" 190 80
-        &$addLbl "參考網址 (URL - 選填)" 300;    $tUrl = &$addTxt "" 300
+        &$addLbl "原價 (Price)" 75;      $tPrice = &$addTxt "100" 75
+        &$addLbl "特價 (Sale Price - 選填)" 140; $tSale = &$addTxt "" 140
+        &$addLbl "商品描述 (Description)" 205;   $tDesc = &$addTxt "全新/二手出清。" 205 80
+        &$addLbl "參考網址 (URL - 選填)" 320;    $tUrl = &$addTxt "" 320
 
-        $btnSave = New-Object System.Windows.Forms.Button; $btnSave.Text="💾 儲存此項"; $btnSave.Location="120,380"; $btnSave.Size="150,45"; $btnSave.BackColor="LightBlue"; $btnSave.DialogResult="OK"
+        $btnSave = New-Object System.Windows.Forms.Button; $btnSave.Text="💾 儲存並繼續"; $btnSave.Location="120,420"; $btnSave.Size="150,45"; $btnSave.BackColor="LightBlue"; $btnSave.DialogResult="OK"
         $formIn.Controls.Add($btnSave); $formIn.AcceptButton = $btnSave
         
         if ($formIn.ShowDialog() -eq "OK") {
@@ -160,7 +163,6 @@ foreach ($Item in $NewItems) {
     $StatusTag = if ($IsSold) { "已售出" } else { "未售出" }
     $CardClass = if ($IsSold) { "card sold-out" } else { "card" }
     
-    # 價格邏輯
     if (![string]::IsNullOrWhiteSpace($Item.sale_price)) {
         $PriceHtml = "<div class=`"price-container`"><span class=`"old-price`">NT$ $($Item.price)</span><span class=`"new-price`">🔥 NT$ $($Item.sale_price)</span></div>"
         $FinalPrice = $Item.sale_price
@@ -236,5 +238,5 @@ $HtmlEnd = @"
 </body></html>
 "@
 [System.IO.File]::WriteAllText("$ScriptPath\index.html", ($HtmlStart + $CardsHtml + $HtmlEnd), [System.Text.Encoding]::UTF8)
-$formStock.Dispose(); git add . ; git commit -m "V9-ProBackend" ; git push origin main
-[Microsoft.VisualBasic.Interaction]::MsgBox("🎉 升級成功！一站式上架面板已就緒！", 64, "大功告成")
+$formStock.Dispose(); git add . ; git commit -m "V9.1-FullCode" ; git push origin main
+[Microsoft.VisualBasic.Interaction]::MsgBox("🎉 排版對齊 & 完整程式碼部署完畢！", 64, "大功告成")
