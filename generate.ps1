@@ -74,11 +74,14 @@ if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
 } else { exit }
 $NewItems | Export-Csv -Path $CsvPath -Encoding UTF8 -NoTypeInformation
 
+# 🚀 破圖殺手：動態時間戳記 (強迫瀏覽器讀取新圖)
+$CacheBuster = (Get-Date).ToString("MMddHHmmss")
+
 # ⭐️ 擷取第一張圖片做為社群預覽圖 (OG Image)
 $OgImageUrl = ""
 if ($NewItems.Count -gt 0) {
     $FirstImagePath = ($NewItems[0].image -split ',')[0].Trim() -replace '\\', '/'
-    $OgImageUrl = $SiteUrl + $FirstImagePath
+    $OgImageUrl = $SiteUrl + $FirstImagePath + "?v=" + $CacheBuster
 }
 
 $HtmlStart = @"
@@ -209,18 +212,19 @@ foreach ($Item in $NewItems) {
         $UrlHtml = "<div class=`"no-link`"></div>"
     }
 
-    # 解除 Base64，直接讀取檔案路徑
+    # 解除 Base64，掛上防破圖晶片 (?v=時間戳記)
     $ImagesPaths = $Item.image -split ',' | ForEach-Object { $_.Trim() -replace '\\', '/' }
-    $MainImage = if ($ImagesPaths.Count -gt 0) { $ImagesPaths[0] } else { "" }
+    $MainImage = if ($ImagesPaths.Count -gt 0) { $ImagesPaths[0] + "?v=" + $CacheBuster } else { "" }
     
     $Thumbs = ""
     if ($ImagesPaths.Count -gt 1) { 
         $Thumbs += '<div class="thumbnails">'
-        foreach ($img in $ImagesPaths) { $Thumbs += "<img src=`"$img`" loading=`"lazy`" onclick=`"changeMainImg(this, '$img')`">" }
+        foreach ($img in $ImagesPaths) { 
+            $Thumbs += "<img src=`"$img?v=$CacheBuster`" loading=`"lazy`" onclick=`"changeMainImg(this, '$img?v=$CacheBuster')`">" 
+        }
         $Thumbs += '</div>' 
     }
     
-    # 加入 data-price 供排序使用
     $CardsHtml += @"
     <div class="$CardClass" data-price="$ActualSortPrice"><div class="main-img-container"><div class="sold-badge">已售出</div><img class="main-img" src="$MainImage" loading="lazy" onclick="openLightbox(this.src)"></div>
     $Thumbs<h3>$($Item.name)</h3>$PriceHtml<p class="desc" title="$DisplayDesc">$DisplayDesc</p>
