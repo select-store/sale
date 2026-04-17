@@ -95,7 +95,7 @@ foreach ($Key in $GroupedProducts.Keys) {
             $ProcessedNames[$MatchedItem.name] = $true
         }
     } else {
-        # 不認識的照片：彈出視窗，啟用 AI 自動補全功能
+        # 不認識的照片：彈出視窗，啟用自動補全
         $formIn = New-Object System.Windows.Forms.Form
         $formIn.Text = "🆕 發現未建檔照片：$Key"; $formIn.Size = New-Object System.Drawing.Size(420, 520); $formIn.StartPosition = "CenterScreen"; $formIn.Font = New-Object System.Drawing.Font("微軟正黑體", 10)
         $startX = 20; $boxWidth = 360
@@ -103,7 +103,7 @@ foreach ($Key in $GroupedProducts.Keys) {
         $addLbl = { param($t, $y) $l = New-Object System.Windows.Forms.Label; $l.Text=$t; $l.Location=New-Object System.Drawing.Point($startX, $y); $l.AutoSize=$true; $formIn.Controls.Add($l) }
         $addTxt = { param($v, $y, $h=30) $t = New-Object System.Windows.Forms.TextBox; $t.Text=$v; $t.Location=New-Object System.Drawing.Point($startX, ($y+22)); $t.Size=New-Object System.Drawing.Size($boxWidth, $h); if($h -gt 30){$t.Multiline=$true}; $formIn.Controls.Add($t); return $t }
         
-        &$addLbl "商品名稱 (💡 輸入架上舊名稱會自動合併)" 10;   $tName = &$addTxt $Key 10
+        &$addLbl "商品名稱 (💡 輸入舊名稱會自動合併照片)" 10;   $tName = &$addTxt $Key 10
         
         # 🔥 核心黑科技：輸入框自動提示舊商品名稱
         $tName.AutoCompleteMode = [System.Windows.Forms.AutoCompleteMode]::SuggestAppend
