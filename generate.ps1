@@ -200,7 +200,7 @@ $formManage.Dispose()
 
 $NewItems | Select-Object -Unique name, price, sale_price, desc, url, image | Export-Csv -Path $CsvPath -Encoding UTF8 -NoTypeInformation -Force
 
-# ================= 網頁生成 (MVC 架構 + 精品視覺升級 + 保留原版 LINE 邏輯) =================
+# ================= 網頁生成 =================
 $CacheBuster = (Get-Date).ToString("yyyyMMddHHmmss")
 function Optimize-ImageToBase64 {
     param([string]$Path)
@@ -246,14 +246,13 @@ foreach ($Item in $NewItems) {
 }
 $JsonString = $WebData | ConvertTo-Json -Depth 5 -Compress
 
-# 🔥 單引號保護的純淨 HTML/JS 模板 (UI升級版)
+# 🔥 單引號保護的純淨 HTML/JS 模板 (強迫症治癒版)
 $HtmlTemplate = @'
 <!DOCTYPE html>
 <html lang="zh-TW"><head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{{TITLE}}</title>
     <style>
-        /* 🔥 全局深色曜石藍主題 */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding-bottom: 90px; overflow-x: hidden; }
         
         .top-nav { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #1e293b; padding: 15px 10px; }
@@ -265,7 +264,6 @@ $HtmlTemplate = @'
         .btn-group { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
         .filter-divider { width: 1px; height: 24px; background: #334155; margin: 0 5px; }
         
-        /* 微互動：點擊縮放 */
         .filter-btn, .sort-btn, .btn-add, .bottom-btn { transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), all 0.3s ease; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
         .filter-btn:active, .sort-btn:active, .btn-add:active { transform: scale(0.95); }
         .bottom-btn:active { transform: scale(0.98); }
@@ -285,7 +283,6 @@ $HtmlTemplate = @'
         @media (min-width: 850px) { .grid-container { grid-template-columns: repeat(4, 1fr); gap: 24px; } }
         @media (min-width: 1200px) { .grid-container { grid-template-columns: repeat(6, 1fr); gap: 28px; } }
         
-        /* 🔥 精品化卡片設計 */
         .card { background: #1e293b; display: flex; flex-direction: column; border-radius: 18px; border: 1px solid #334155; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2); overflow: hidden; opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease, box-shadow 0.3s ease, border-color 0.3s ease; }
         .card.show { opacity: 1; transform: translateY(0); }
         .card.show:hover { box-shadow: 0 15px 30px rgba(0,0,0,0.4); border-color: #475569; transform: translateY(-4px); }
@@ -306,23 +303,28 @@ $HtmlTemplate = @'
         .thumb-img:hover, .thumb-img.active { opacity: 1; border-color: #3b82f6; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
         
         .info { flex-grow: 1; display: flex; flex-direction: column; }
-        h3 { margin: 0 0 10px 0; font-size: 1.2rem; color: #f8fafc; font-weight: 600; line-height: 1.4; }
+        
+        /* 🔥 標題兩行鎖死，絕不忽高忽低 */
+        h3 { margin: 0 0 10px 0; font-size: 1.2rem; color: #f8fafc; font-weight: 600; line-height: 1.4; height: 2.8em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; }
         
         .price-container { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
         .price { color: #ef4444; font-weight: 800; font-size: 1.4rem; }
         .old-price { color: #64748b; text-decoration: line-through; font-size: 1rem; }
-        .new-price { color: #ef4444; font-weight: 800; font-size: 1.5rem; background: rgba(239, 68, 68, 0.15); padding: 4px 12px; border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.2); }
+        
+        /* 🔥 去油膩：拔除底色，換成純淨俐落亮紅色 */
+        .new-price { color: #ef4444; font-weight: 800; font-size: 1.5rem; }
         
         .desc { font-size: 0.95rem; color: #94a3b8; margin: 0 0 16px 0; line-height: 1.6; white-space: pre-line; }
-        .ref-link { font-size: 0.85rem; color: #3b82f6; text-decoration: none; font-weight: 500; margin-top: auto; display: inline-block; padding-top: 12px; border-top: 1px dashed #334155; transition: color 0.2s; }
+        
+        /* 🔥 調整間距，讓底部的購物車按鈕可以吃到 margin-top: auto 沉到底 */
+        .ref-link { font-size: 0.85rem; color: #3b82f6; text-decoration: none; font-weight: 500; margin-top: 8px; margin-bottom: 16px; display: inline-block; padding-top: 12px; border-top: 1px dashed #334155; transition: color 0.2s; }
         .ref-link:hover { color: #60a5fa; }
         
-        /* 🔥 漸層按鈕 */
-        .btn-add { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 600; font-size: 1.05rem; width: 100%; margin-top: 16px; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+        /* 🔥 完美切齊底線 (margin-top: auto 把上方撐開) */
+        .btn-add { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 600; font-size: 1.05rem; width: 100%; margin-top: auto; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
         .btn-add.added { background: linear-gradient(135deg, #f59e0b, #ea580c); box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); }
         .btn-add.sold { background: #334155; color: #64748b; box-shadow: none; cursor: not-allowed; }
         
-        /* 🔥 專業滑動燈箱 (加上箭頭) */
         #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; opacity: 0; transition: opacity 0.3s ease; }
         #lightbox.visible { opacity: 1; }
         #lb-img-container { position: relative; width: 100%; height: 85vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
@@ -332,7 +334,6 @@ $HtmlTemplate = @'
         .lb-close { position: absolute; top: 20px; right: 20px; color: rgba(255,255,255,0.6); font-size: 2.5rem; cursor: pointer; z-index: 10001; line-height: 1; transition: color 0.2s; padding: 10px; }
         .lb-close:hover { color: white; }
         
-        /* 🔥 完美的手機/電腦雙棲箭頭 */
         .lb-nav { position: absolute; top: 50%; transform: translateY(-50%); color: white; font-size: 1.8rem; cursor: pointer; user-select: none; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; z-index: 10000; background: rgba(255,255,255,0.1); backdrop-filter: blur(4px); border-radius: 50%; transition: background 0.2s, transform 0.2s; }
         .lb-nav:hover { background: rgba(255,255,255,0.25); }
         .lb-nav:active { transform: translateY(-50%) scale(0.9); }
@@ -362,7 +363,6 @@ $HtmlTemplate = @'
 </head><body>
     <div class="top-nav">
         <input type="text" id="searchInput" class="search-box" placeholder="🔍 搜尋商品或描述...">
-        
         <div class="filter-container">
             <div class="btn-group">
                 <button class="filter-btn active" data-tag="all">全部</button>
@@ -371,9 +371,7 @@ $HtmlTemplate = @'
                 <button class="filter-btn" data-tag="全新">#全新</button>
                 <button class="filter-btn" data-tag="二手">#二手</button>
             </div>
-            
             <div class="filter-divider"></div>
-            
             <div class="btn-group">
                 <button class="sort-btn active" data-sort="asc">價格由低到高</button>
                 <button class="sort-btn" data-sort="desc">價格由高到低</button>
@@ -407,7 +405,6 @@ $HtmlTemplate = @'
         let activeFilters = new Set();
         let activeSort = 'asc';
         
-        // 觀察器：負責觸發滾動浮現動畫
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -460,7 +457,7 @@ $HtmlTemplate = @'
                     <div class="card-body">
                         ${thumbHtml}
                         <div class="info">
-                            <h3>${item.name}</h3>
+                            <h3 title="${item.name}">${item.name}</h3>
                             <div class="price-container">${priceHtml}</div>
                             <p class="desc">${item.desc}</p>
                             ${urlHtml}
@@ -469,11 +466,10 @@ $HtmlTemplate = @'
                     </div>
                 `;
                 grid.appendChild(card);
-                observer.observe(card); // 綁定浮現動畫
+                observer.observe(card);
             });
         }
 
-        // 🔥 專業級手勢放大鏡邏輯 (Swipe & Nav)
         let lbData = [];
         let lbIndex = 0;
         const lbBox = document.getElementById('lightbox');
@@ -483,10 +479,8 @@ $HtmlTemplate = @'
 
         function openLightbox(itemIndex, imgIndex) {
             const item = currentFilteredData[itemIndex];
-            // 將所有高畫質網址準備好，若沒有則用縮圖 base64
             lbData = item.highres.map((url, i) => url || item.images[i]);
             lbIndex = imgIndex;
-            
             lbBox.style.display = 'flex';
             setTimeout(() => lbBox.classList.add('visible'), 10);
             updateLightbox();
@@ -495,7 +489,7 @@ $HtmlTemplate = @'
         function closeLightbox() {
             lbBox.classList.remove('visible');
             setTimeout(() => { lbBox.style.display = 'none'; lbImg.src = ''; }, 300);
-            lbImg.style.transform = `scale(1) translate(0px, 0px)`; // 重置縮放
+            lbImg.style.transform = `scale(1) translate(0px, 0px)`;
         }
 
         function navLightbox(dir, e) {
@@ -513,15 +507,14 @@ $HtmlTemplate = @'
             
             lbImg.style.display = 'none';
             lbLoader.style.display = 'block';
-            lbImg.style.transform = `scale(1) translate(0px, 0px)`; // 換圖重置縮放
+            lbImg.style.transform = `scale(1) translate(0px, 0px)`; 
             
             const tmp = new Image();
             tmp.onload = () => { lbImg.src = tmp.src; lbLoader.style.display = 'none'; lbImg.style.display = 'block'; };
-            tmp.onerror = () => { lbLoader.style.display = 'none'; lbImg.style.display = 'block'; }; // 錯誤保護
+            tmp.onerror = () => { lbLoader.style.display = 'none'; lbImg.style.display = 'block'; };
             tmp.src = lbData[lbIndex];
         }
 
-        // 鍵盤左右鍵切換圖片、ESC 關閉
         document.addEventListener('keydown', (e) => {
             if (lbBox.style.display === 'flex') {
                 if (e.key === 'ArrowLeft') navLightbox(-1);
@@ -530,7 +523,6 @@ $HtmlTemplate = @'
             }
         });
 
-        // 🔥 手機版滑動 (Swipe) 與雙指放大 (Pinch to Zoom) 基礎支援
         let touchStartX = 0, touchEndX = 0;
         const imgContainer = document.getElementById('lb-img-container');
         
@@ -541,28 +533,23 @@ $HtmlTemplate = @'
         imgContainer.addEventListener('touchend', e => {
             if(e.changedTouches.length === 1 && lbData.length > 1) {
                 touchEndX = e.changedTouches[0].screenX;
-                if (touchEndX < touchStartX - 50) navLightbox(1); // 左滑下一張
-                if (touchEndX > touchStartX + 50) navLightbox(-1); // 右滑上一張
+                if (touchEndX < touchStartX - 50) navLightbox(1); 
+                if (touchEndX > touchStartX + 50) navLightbox(-1);
             }
         }, {passive: true});
 
-        // 點擊背景關閉
         lbBox.addEventListener('click', (e) => {
             if(e.target === lbBox || e.target === imgContainer) closeLightbox();
         });
 
-        // 縮圖切換主圖連動
         function changeImg(thumb, itemIndex, imgIndex){ 
             document.getElementById(`main-img-${itemIndex}`).src = currentFilteredData[itemIndex].images[imgIndex];
             document.getElementById(`main-img-${itemIndex}`).parentElement.setAttribute('onclick', `openLightbox(${itemIndex}, ${imgIndex})`);
-            
-            // 更新縮圖 active 狀態
             const siblings = thumb.parentElement.children;
             for(let s of siblings) s.classList.remove('active');
             thumb.classList.add('active');
         }
 
-        // 結帳與共用邏輯
         function toggleCart(name, price, btn) {
             event.stopPropagation();
             if (cart[name]) { delete cart[name]; } else { cart[name] = price; }
@@ -572,7 +559,6 @@ $HtmlTemplate = @'
             if(cart[name]) showToast('🛒 已加入購物車！');
         }
 
-        // 🔥 使用你確認沒問題的原版電腦版 LINE 跳轉邏輯 (不使用 /R/)
         function openLine() {
             let isDesktop = !/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             let rawId = "{{LINE_ID}}".trim();
@@ -634,8 +620,8 @@ $FinalHtml = $HtmlTemplate.Replace('{{JSON}}', $JsonString).Replace('{{TITLE}}',
 
 try {
     Write-Host "開始上傳至 GitHub..." -ForegroundColor Cyan
-    git add . ; git commit -m "Pure Text Checkout + Premium UI/UX + Mobile Arrows" ; git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 完美發布！高級視覺體驗已套用，並保留原本的 LINE 結帳邏輯！", 64, "大功告成")
+    git add . ; git commit -m "Alignment and Typography Clean Up" ; git push origin main
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 強迫症治癒包已套用！卡片對齊、文字去油膩完美完成！", 64, "大功告成")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 上傳 GitHub 失敗！", 48, "警告")
 }
