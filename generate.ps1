@@ -173,6 +173,7 @@ $formManage.Size = "1100,600"; $formManage.StartPosition = "CenterScreen"; $form
 $grid = New-Object System.Windows.Forms.DataGridView; $grid.DataSource = $dt; $grid.Dock = "Fill"; $grid.AutoSizeColumnsMode = "Fill"; $grid.AllowUserToAddRows = $false; $grid.RowHeadersVisible = $false
 $formManage.Controls.Add($grid)
 
+# 實作置頂最多 2 個的防呆機制
 $grid.add_CurrentCellDirtyStateChanged({
     if ($grid.IsCurrentCellDirty) { $grid.CommitEdit([System.Windows.Forms.DataGridViewDataErrorContexts]::Commit) }
 })
@@ -212,6 +213,7 @@ if ($formManage.ShowDialog() -eq "OK") {
     foreach ($row in $dt.Rows) {
         if ($row["徹底刪除"] -eq $true) { continue }
         $finalDesc = $row["商品描述"].ToString()
+        # 依照順序壓入標籤
         if ($row["置頂"]) { $finalDesc = "[置頂] " + $finalDesc }
         if ($row["售出"]) { $finalDesc = "[售出] " + $finalDesc }
         
@@ -229,7 +231,7 @@ function Optimize-ImageToBase64 {
     param([string]$Path)
     try {
         if (-not (Test-Path $Path)) { return $null }
-        $bmp = [System.Drawing.Image]::FromFile($Path); $maxWidth = 350; $width = $bmp.Width; $height = $bmp.Height
+        $bmp = [System.Drawing.Image]::FromFile($Path); $maxWidth = 400; $width = $bmp.Width; $height = $bmp.Height
         if ($width -gt $maxWidth) { $ratio = $maxWidth / $width; $width = $maxWidth; $height = [int]($height * $ratio) }
         $newBmp = New-Object System.Drawing.Bitmap($width, $height); $g = [System.Drawing.Graphics]::FromImage($newBmp)
         $g.Clear([System.Drawing.Color]::White); $g.InterpolationMode = 7; $g.DrawImage($bmp, 0, 0, $width, $height)
@@ -271,7 +273,7 @@ foreach ($Item in $NewItems) {
 }
 $JsonString = $WebData | ConvertTo-Json -Depth 5 -Compress
 
-# 🔥 純淨 HTML/JS 模板 (手機版雙欄大字體極限放大術)
+# 🔥 純淨 HTML/JS 模板 (霸氣單欄 + 字體放大 + 解除字數封印)
 $HtmlTemplate = @'
 <!DOCTYPE html>
 <html lang="zh-TW"><head>
@@ -287,21 +289,22 @@ $HtmlTemplate = @'
         ::-webkit-scrollbar-thumb:hover { background: #555; }
         
         .top-nav { background: rgba(26, 26, 26, 0.75); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 15px 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
-        .search-box { width: 100%; max-width: 800px; margin: 0 auto 12px; display: block; padding: 10px 20px; border: 1px solid #444; border-radius: 25px; background: rgba(36, 36, 36, 0.9); color: #fff; box-sizing: border-box; font-size: 0.95rem; outline: none; transition: 0.3s; font-family: 'Noto Sans TC', sans-serif; }
+        .search-box { width: 100%; max-width: 800px; margin: 0 auto 12px; display: block; padding: 12px 20px; border: 1px solid #444; border-radius: 25px; background: rgba(36, 36, 36, 0.9); color: #fff; box-sizing: border-box; font-size: 1rem; outline: none; transition: 0.3s; font-family: 'Noto Sans TC', sans-serif; }
         .search-box:focus { border-color: #3498db; background: #222; }
         
-        .filter-container { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 800px; margin: 0 auto; }
+        .filter-container { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 800px; margin: 0 auto; }
         .btn-group { display: flex; gap: 8px; width: 100%; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; white-space: nowrap; }
         .btn-group::-webkit-scrollbar { display: none; }
         
-        .filter-btn, .sort-btn { flex-shrink: 0; background: rgba(42, 42, 42, 0.8); border: 1px solid #444; padding: 6px 14px; border-radius: 20px; cursor: pointer; color: #ccc; font-size: 0.85rem; transition: 0.2s; font-family: 'Noto Sans TC', sans-serif; }
+        .filter-btn, .sort-btn { flex-shrink: 0; background: rgba(42, 42, 42, 0.8); border: 1px solid #444; padding: 8px 16px; border-radius: 20px; cursor: pointer; color: #ccc; font-size: 0.95rem; transition: 0.2s; font-family: 'Noto Sans TC', sans-serif; }
         .filter-btn.active { background: #3498db; color: white; border-color: #3498db; }
         .sort-btn { background: rgba(44, 62, 80, 0.8); border-color: #34495e; }
         .sort-btn.active { background: #e67e22; color: white; border-color: #e67e22; font-weight: bold; }
 
         @media (max-width: 600px) { .filter-divider { display: none; } }
         
-        .grid-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 16px 12px; max-width: 1400px; margin: 0 auto; min-height: 400px; transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        /* 🔥 B. 單欄霸氣滿版網格 (手機版 1 欄) */
+        .grid-container { display: grid; grid-template-columns: 1fr; gap: 24px; padding: 16px; max-width: 1400px; margin: 0 auto; min-height: 400px; transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
         body.search-focused .grid-container { filter: blur(5px) brightness(0.4); pointer-events: none; transform: scale(0.98); }
         
         .empty-state { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 10px; text-align: center; color: #888; animation: cardEnter 0.5s ease both; }
@@ -310,55 +313,58 @@ $HtmlTemplate = @'
         .empty-state p { margin: 0 0 20px; font-size: 0.9rem; }
         .btn-reset { background: #3498db; color: #fff; border: none; padding: 10px 24px; border-radius: 24px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: 0.2s; box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3); font-family: 'Noto Sans TC', sans-serif; }
 
-        /* 🔥 手機雙欄極限放大術：卡片內縮從 12px 降為 10px 爭取空間 */
-        .card { background: #1e1e24; display: flex; flex-direction: column; height: 100%; border-radius: 12px; border: 1px solid #2a2a2a; box-sizing: border-box; overflow: hidden; transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s; padding: 10px; animation: cardEnter 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; position: relative; }
+        /* 卡片設計 - 內距加大 */
+        .card { background: #1e1e24; display: flex; flex-direction: column; height: 100%; border-radius: 16px; border: 1px solid #2a2a2a; box-sizing: border-box; overflow: hidden; transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s; padding: 18px; animation: cardEnter 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; position: relative; }
         .card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.08); }
         @keyframes cardEnter { from { opacity: 0; transform: translateY(30px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
         
         .card.pinned { border-color: rgba(238, 130, 238, 0.5); box-shadow: 0 4px 20px rgba(238, 130, 238, 0.08); }
         .card.pinned:hover { box-shadow: 0 12px 32px rgba(238, 130, 238, 0.2), inset 0 0 0 1px rgba(238, 130, 238, 0.6); }
         
-        .img-wrapper { width: 100%; position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 10px; }
-        .main-img-container { width: 90%; max-width: 260px; aspect-ratio: 1/1; position: relative; border-radius: 8px; cursor: zoom-in; background: #1a1a1a; }
+        /* 圖片容器 - 單欄後可以變大 */
+        .img-wrapper { width: 100%; position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 16px; }
+        .main-img-container { width: 100%; max-width: 350px; aspect-ratio: 1/1; position: relative; border-radius: 12px; cursor: zoom-in; background: #1a1a1a; }
         .main-img { width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity 0.4s ease-in-out; }
         .main-img.loaded { opacity: 1; }
         
-        /* 🔥 手機雙欄極限放大術：標籤字體微調放大 */
-        .status-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; } 
-        .pin-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 6px; border-radius: 4px; font-weight: 700; font-size: 0.7rem; letter-spacing: 0.5px; border: 1px solid #EE82EE; color: #EE82EE; background: rgba(238, 130, 238, 0.1); }
+        /* 狀態膠囊 - 字體放大 */
+        .status-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; } 
+        .pin-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.5px; border: 1px solid #EE82EE; color: #EE82EE; background: rgba(238, 130, 238, 0.1); }
         .pin-badge i { font-style: normal; color: #EE82EE; } 
-        .condition-badge { display: inline-block; padding: 3px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.5px; }
+
+        .condition-badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px; }
         .badge-new { background: rgba(230, 126, 34, 0.15); color: #e67e22; border: 1px solid rgba(230, 126, 34, 0.4); }
         .badge-used { background: rgba(255, 255, 255, 0.08); color: #cccccc; border: 1px solid rgba(255, 255, 255, 0.2); }
 
-        .thumb-overlay-container { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); width: 90%; display: flex; justify-content: center; z-index: 10; }
-        .thumb-scroll-area { display: flex; gap: 4px; background: rgba(20, 20, 20, 0.65); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 4px 8px; border-radius: 20px; align-items: center; border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.5); overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; scroll-behavior: smooth; }
-        .thumb-dot { flex-shrink: 0; width: 20px; height: 20px; background-size: cover; background-position: center; border-radius: 50%; cursor: pointer; filter: brightness(0.6) saturate(0.7); border: 2px solid transparent; transition: all 0.3s; background-color: #111; }
+        .thumb-overlay-container { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 90%; display: flex; justify-content: center; z-index: 10; }
+        .thumb-scroll-area { display: flex; gap: 6px; background: rgba(20, 20, 20, 0.65); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 6px 12px; border-radius: 20px; align-items: center; border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.5); overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; scroll-behavior: smooth; }
+        .thumb-dot { flex-shrink: 0; width: 26px; height: 26px; background-size: cover; background-position: center; border-radius: 50%; cursor: pointer; filter: brightness(0.6) saturate(0.7); border: 2px solid transparent; transition: all 0.3s; background-color: #111; }
         .thumb-dot:hover { transform: scale(1.3); filter: brightness(1) saturate(1); z-index: 2; }
         .thumb-dot.active { filter: brightness(1) saturate(1); border-color: rgba(255, 255, 255, 0.9); box-shadow: 0 0 8px rgba(255, 255, 255, 0.4); transform: scale(1.15); }
         .thumb-scroll-area:hover .thumb-dot.active:not(:hover) { transform: scale(1); box-shadow: none; border-color: rgba(255, 255, 255, 0.4); }
         
-        .sold-badge { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-10deg); background: rgba(231, 76, 60, 0.95); color: white; padding: 6px 14px; font-weight: 900; font-size: 1.1rem; border-radius: 6px; z-index: 15; border: 2px solid white; letter-spacing: 1px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .sold-badge { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-10deg); background: rgba(231, 76, 60, 0.95); color: white; padding: 10px 24px; font-weight: 900; font-size: 1.2rem; border-radius: 8px; z-index: 15; border: 3px solid white; letter-spacing: 2px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
         .sold-out .sold-badge { display: block; }
         .sold-out .main-img { filter: grayscale(100%); opacity: 0.4; }
         
-        .info { flex-grow: 1; display: flex; flex-direction: column; padding: 0 0 10px 0; }
+        .info { flex-grow: 1; display: flex; flex-direction: column; padding: 0 0 12px 0; }
+        /* 🔥 B. 解除行數封印，字體放大 */
+        h3 { margin: 0 0 10px 0; font-size: 1.25rem; color: #fff; line-height: 1.4; font-weight: 700; display: block; word-break: break-word; }
         
-        /* 🔥 手機雙欄極限放大術：文字層級全面放大 */
-        h3 { margin: 0 0 6px 0; font-size: 0.95rem; color: #fff; line-height: 1.35; font-weight: 700; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; }
+        .price-container { margin-bottom: 12px; display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; font-family: 'Noto Sans TC', sans-serif; }
+        .currency { font-size: 0.7em; font-weight: 500; margin-right: 2px; }
+        .price { color: #ff6b6b; font-weight: 900; font-size: 1.4rem; }
+        .old-price { color: #888; text-decoration: line-through; font-size: 1rem; font-weight: 500; }
+        .new-price { color: #ff6b6b; font-weight: 900; font-size: 1.4rem; background: rgba(255, 107, 107, 0.15); padding: 4px 8px; border-radius: 6px; }
         
-        .price-container { margin-bottom: 8px; display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; font-family: 'Noto Sans TC', sans-serif; }
-        .currency { font-size: 0.75em; font-weight: 500; margin-right: 2px; }
-        .price { color: #ff6b6b; font-weight: 900; font-size: 1.2rem; }
-        .old-price { color: #888; text-decoration: line-through; font-size: 0.85rem; font-weight: 500; }
-        .new-price { color: #ff6b6b; font-weight: 900; font-size: 1.2rem; background: rgba(255, 107, 107, 0.15); padding: 2px 6px; border-radius: 4px; }
+        /* 🔥 B. 描述解除封印，完整顯示，字體加大，保留斷行 */
+        .desc { font-size: 1rem; color: #aaa; margin: 0 0 16px 0; line-height: 1.6; display: block; white-space: pre-line; word-break: break-word; }
         
-        .desc { font-size: 0.9rem; color: #999; margin: 0 0 8px 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; }
-        .ref-link { font-size: 0.85rem; color: #3498db; text-decoration: none; font-weight: 600; margin-top: auto; display: inline-block; padding-top: 8px; border-top: 1px dashed #333; }
+        .ref-link { font-size: 0.95rem; color: #3498db; text-decoration: none; font-weight: 600; margin-top: auto; display: inline-block; padding-top: 10px; border-top: 1px dashed #444; }
         
-        /* 🔥 手機雙欄極限放大術：按鈕變大 */
         .card-actions { margin-top: auto; }
-        .btn-add { font-family: 'Noto Sans TC', sans-serif; background: #3498db; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.95rem; width: 100%; transition: background 0.2s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 4px; position: relative; overflow: hidden; }
+        /* 🔥 B. 按鈕變大變好按 */
+        .btn-add { font-family: 'Noto Sans TC', sans-serif; background: #3498db; color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1.1rem; width: 100%; transition: background 0.2s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 6px; position: relative; overflow: hidden; letter-spacing: 1px; }
         .btn-add::after { content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(to right, transparent, rgba(255,255,255,0.4), transparent); transform: skewX(-20deg); animation: shineSweep 3s infinite ease-in-out; }
         @keyframes shineSweep { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
         .btn-add:active { transform: scale(0.96); }
@@ -375,18 +381,18 @@ $HtmlTemplate = @'
         #lb-next { right: 10px; }
         #lb-close { position: absolute; top: 20px; right: 15px; background: rgba(255,255,255,0.1); width: 36px; height: 36px; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: white; border: none; font-size: 1.2rem; cursor: pointer; z-index: 10001; backdrop-filter: blur(4px); }
 
-        #toast { visibility: hidden; min-width: auto; background: rgba(30, 30, 30, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: #fff; text-align: center; border-radius: 30px; padding: 10px 20px; position: fixed; z-index: 10000; left: 50%; bottom: 100px; font-size: 0.95rem; transform: translate(-50%, 20px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); font-weight: bold; border: 1px solid rgba(255,255,255,0.1); pointer-events: none; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+        #toast { visibility: hidden; min-width: auto; background: rgba(30, 30, 30, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: #fff; text-align: center; border-radius: 30px; padding: 12px 24px; position: fixed; z-index: 10000; left: 50%; bottom: 100px; font-size: 1.05rem; transform: translate(-50%, 20px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); font-weight: bold; border: 1px solid rgba(255,255,255,0.1); pointer-events: none; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
         #toast.show { visibility: visible; opacity: 1; transform: translate(-50%, 0); }
         
         .bottom-bar { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: calc(100% - 32px); max-width: 400px; display: flex; z-index: 1000; box-shadow: 0 10px 25px rgba(0,0,0,0.5); pointer-events: auto; border-radius: 30px; overflow: hidden; background: rgba(30,30,30,0.8); backdrop-filter: blur(10px); }
-        .bottom-btn { font-family: 'Noto Sans TC', sans-serif; flex: 1; padding: 14px 0; text-align: center; font-size: 0.95rem; font-weight: bold; cursor: pointer; border: none; outline: none; text-decoration: none; color: white; }
+        .bottom-btn { font-family: 'Noto Sans TC', sans-serif; flex: 1; padding: 16px 0; text-align: center; font-size: 1.05rem; font-weight: bold; cursor: pointer; border: none; outline: none; text-decoration: none; color: white; }
         .btn-cart { background: linear-gradient(135deg, rgba(231, 76, 60, 0.95), rgba(192, 57, 43, 0.95)); border-right: 1px solid rgba(255,255,255,0.1); transform-origin: center center; }
         .btn-line { background: linear-gradient(135deg, rgba(6, 199, 85, 0.95), rgba(0, 179, 74, 0.95)); display: flex; align-items: center; justify-content: center; }
         
         @keyframes cartBounce { 0% { transform: scale(1); } 40% { transform: scale(1.1); } 70% { transform: scale(0.95); } 100% { transform: scale(1); } }
         .bounce-anim { animation: cartBounce 0.4s ease-in-out; }
         
-        #btt-btn { position: fixed; bottom: 85px; right: 16px; width: 40px; height: 40px; border-radius: 50%; background: rgba(60, 60, 60, 0.75); color: #ddd; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 999; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: 0.3s; backdrop-filter: blur(6px); font-size: 1.1rem; }
+        #btt-btn { position: fixed; bottom: 85px; right: 16px; width: 46px; height: 46px; border-radius: 50%; background: rgba(60, 60, 60, 0.75); color: #ddd; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 999; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: 0.3s; backdrop-filter: blur(6px); font-size: 1.3rem; }
         #btt-btn.show { opacity: 1; pointer-events: auto; }
         
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 10005; display: flex; justify-content: center; align-items: flex-end; opacity: 0; pointer-events: none; transition: 0.3s; }
@@ -394,35 +400,26 @@ $HtmlTemplate = @'
         .modal-content { font-family: 'Noto Sans TC', sans-serif; background: #222; width: 100%; max-width: 500px; border-radius: 20px 20px 0 0; padding: 24px; box-sizing: border-box; transform: translateY(100%); transition: 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); box-shadow: 0 -10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; max-height: 85vh; }
         .modal-overlay.show .modal-content { transform: translateY(0); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 16px; margin-bottom: 16px; }
-        .modal-header h2 { margin: 0; font-size: 1.2rem; color: #fff; font-weight: 700; }
+        .modal-header h2 { margin: 0; font-size: 1.3rem; color: #fff; font-weight: 700; }
         .close-btn { background: none; border: none; color: #888; font-size: 1.5rem; cursor: pointer; transition: 0.2s; }
         .close-btn:hover { color: #fff; }
         .modal-body { overflow-y: auto; flex-grow: 1; padding-right: 5px; }
         .modal-body::-webkit-scrollbar { width: 4px; }
-        .checkout-item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px dashed #333; font-size: 0.95rem; color: #ddd; }
+        .checkout-item { display: flex; justify-content: space-between; padding: 14px 0; border-bottom: 1px dashed #333; font-size: 1.05rem; color: #ddd; }
         .checkout-item-name { flex-grow: 1; padding-right: 15px; }
         .checkout-item-price { font-weight: bold; color: #ff6b6b; white-space: nowrap; }
         .modal-footer { margin-top: 16px; padding-top: 16px; border-top: 1px solid #333; }
-        .modal-total { text-align: right; font-size: 1.4rem; color: #fff; font-weight: 900; margin-bottom: 16px; }
+        .modal-total { text-align: right; font-size: 1.6rem; color: #fff; font-weight: 900; margin-bottom: 16px; }
         .modal-total .currency { color: #ff6b6b; }
-        .btn-confirm { width: 100%; background: #06C755; color: white; border: none; padding: 14px; border-radius: 12px; font-size: 1.05rem; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 15px rgba(6, 199, 85, 0.3); font-family: 'Noto Sans TC', sans-serif; }
+        .btn-confirm { width: 100%; background: #06C755; color: white; border: none; padding: 16px; border-radius: 12px; font-size: 1.15rem; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 15px rgba(6, 199, 85, 0.3); font-family: 'Noto Sans TC', sans-serif; }
 
-        /* 🖥️ 桌機版排版覆蓋 */
-        @media (min-width: 768px) {
+        /* 🖥️ 桌機版排版覆蓋 (響應式斷點) */
+        @media (min-width: 600px) {
+            .grid-container { grid-template-columns: repeat(2, 1fr); padding: 24px; }
+        }
+        @media (min-width: 900px) {
             body { padding-bottom: 0; }
-            .grid-container { grid-template-columns: repeat(3, 1fr); gap: 24px; padding: 24px; }
-            .card { padding: 18px; }
-            h3 { font-size: 1.15rem; margin-bottom: 10px; }
-            .price { font-size: 1.3rem; }
-            .new-price { font-size: 1.3rem; padding: 3px 8px; }
-            .old-price { font-size: 0.95rem; }
-            .desc { font-size: 0.95rem; -webkit-line-clamp: 3; margin-bottom: 12px; }
-            
-            .status-row { margin-bottom: 10px; }
-            .condition-badge, .pin-badge { font-size: 0.75rem; padding: 4px 10px; }
-            
-            .thumb-dot { width: 24px; height: 24px; }
-            .btn-add { font-size: 1rem; padding: 12px; }
+            .grid-container { grid-template-columns: repeat(3, 1fr); }
             
             .filter-container { flex-direction: row; justify-content: space-between; } 
             .btn-group { width: auto; overflow: visible; padding: 0; }
@@ -433,7 +430,7 @@ $HtmlTemplate = @'
             .btn-line { background: #06C755; }
             
             #btt-btn { bottom: 110px; right: 35px; width: 50px; height: 50px; font-size: 1.5rem; background: rgba(52, 152, 219, 0.9); border: none; }
-            #toast { bottom: 40px; font-size: 1rem; padding: 12px 24px; } 
+            #toast { bottom: 40px; font-size: 1.1rem; padding: 14px 28px; } 
             
             .modal-overlay { align-items: center; }
             .modal-content { border-radius: 20px; transform: scale(0.9); }
@@ -826,8 +823,8 @@ $FinalHtml = $HtmlTemplate.Replace('{{JSON}}', $JsonString).Replace('{{TITLE}}',
 
 try {
     Write-Host "開始上傳至 GitHub..." -ForegroundColor Cyan
-    git add . ; git commit -m "UI: Mobile Font Size Maximize & Reduced Card Padding" ; git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 搞定！手機版的字體已經全面放大，閱讀體驗絕對舒服！", 64, "介面升級")
+    git add . ; git commit -m "Mobile UI: Single Column, Large Fonts, Full Description Unclamped" ; git push origin main
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 升級完成！手機版已切換為霸氣單欄滿版，字體清晰、描述完整顯示！", 64, "介面升級")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 上傳 GitHub 失敗！", 48, "警告")
 }
