@@ -177,7 +177,7 @@ foreach ($Item in $ExistingItems) {
     }
 }
 
-# ⭐️ 終極管理中心 (含徹底刪除)
+# ⭐️ 終極管理中心
 $dt = New-Object System.Data.DataTable
 $dt.Columns.Add("徹底刪除", [bool]) | Out-Null
 $dt.Columns.Add("售出", [bool]) | Out-Null
@@ -290,7 +290,6 @@ $HtmlStart = @"
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>$ShopTitle</title>
     <style>
-        /* 基礎設定 */
         body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #eee; margin: 0; padding-bottom: 70px; }
         .search-container { padding: 10px; background: #1e1e1e; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #333; }
         #searchInput { width: 100%; max-width: 800px; margin: 0 auto; display: block; padding: 14px 20px; border: 1px solid #444; border-radius: 25px; background: #222; color: #fff; box-sizing: border-box; font-size: 1rem; }
@@ -327,21 +326,13 @@ $HtmlStart = @"
         #toast { visibility: hidden; min-width: 250px; background-color: rgba(30, 30, 30, 0.95); color: #fff; text-align: center; border-radius: 8px; padding: 14px 24px; position: fixed; z-index: 10000; left: 50%; bottom: 90px; font-size: 1.1rem; transform: translateX(-50%); box-shadow: 0 4px 12px rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.3s; font-weight: bold; border: 1px solid #555; pointer-events: none; }
         #toast.show { visibility: visible; opacity: 1; }
         
-        /* 🔥 手機版預設：底部滿版雙拼導覽列 */
-        .action-container { position: fixed; bottom: 0; left: 0; width: 100%; display: flex; z-index: 1000; box-shadow: 0 -4px 15px rgba(0,0,0,0.5); }
-        .action-btn { flex: 1; padding: 18px 0; text-align: center; font-size: 1.1rem; font-weight: bold; cursor: pointer; border: none; outline: none; text-decoration: none; display: flex; align-items: center; justify-content: center; }
+        /* 🔥 APP 級別底部導覽列 */
+        .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; display: flex; z-index: 1000; box-shadow: 0 -4px 15px rgba(0,0,0,0.5); }
+        .bottom-btn { flex: 1; padding: 18px 0; text-align: center; font-size: 1.1rem; font-weight: bold; cursor: pointer; border: none; outline: none; text-decoration: none; }
         .btn-cart { background: #e74c3c; color: white; transition: background 0.3s; border-right: 1px solid #c0392b; }
         .btn-cart:hover { background: #c0392b; }
-        .btn-line { background: #06C755; color: white; transition: background 0.3s; }
+        .btn-line { background: #06C755; color: white; transition: background 0.3s; display: flex; align-items: center; justify-content: center; }
         .btn-line:hover { background: #05b04a; }
-
-        /* 🔥 電腦版覆蓋：右下角懸浮按鈕 (大於 768px 觸發) */
-        @media (min-width: 768px) {
-            body { padding-bottom: 20px; } /* 取消墊高 */
-            .action-container { bottom: 30px; left: auto; right: 30px; width: auto; box-shadow: none; background: transparent; flex-direction: column-reverse; gap: 15px; align-items: flex-end; }
-            .action-btn { flex: none; padding: 15px 25px; border-radius: 50px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: none; }
-            #cartBtn { display: none; /* 電腦版 0 件時隱藏 */ }
-        }
     </style>
 </head><body>
     <div class="search-container"><input type="text" id="searchInput" placeholder="🔍 搜尋商品或描述..."></div>
@@ -424,9 +415,9 @@ foreach ($Item in $NewItems) {
 $HtmlEnd = @"
     </div>
     
-    <div class="action-container">
-        <button id="cartBtn" class="action-btn btn-cart" onclick="copyCart()">📝 結帳清單 (0件)</button>
-        <a href="$LineLink" class="action-btn btn-line" target="_blank">💬 聯絡老闆 (LINE)</a>
+    <div class="bottom-bar">
+        <button id="cartBtn" class="bottom-btn btn-cart" onclick="copyCart()">📝 結帳清單 (0件)</button>
+        <a href="$LineLink" class="bottom-btn btn-line" target="_blank">💬 聯絡老闆 (LINE)</a>
     </div>
 
     <div id="lightbox" onclick="this.style.display='none'">
@@ -454,21 +445,8 @@ $HtmlEnd = @"
 
         function updateCartBtn() {
             let count = Object.keys(cart).length;
-            let cartBtn = document.getElementById('cartBtn');
-            cartBtn.innerText = '📝 結帳清單 (' + count + '件)';
-            
-            // 🔥 判斷螢幕寬度：電腦版 0 件時隱藏，手機版永遠顯示
-            if (window.innerWidth >= 768) {
-                cartBtn.style.display = count > 0 ? 'flex' : 'none';
-            } else {
-                cartBtn.style.display = 'flex';
-            }
+            document.getElementById('cartBtn').innerText = '📝 結帳清單 (' + count + '件)';
         }
-
-        // 監聽螢幕大小改變，動態切換顯示狀態
-        window.addEventListener('resize', updateCartBtn);
-        // 初始化跑一次
-        updateCartBtn();
 
         function copyCart() {
             let count = Object.keys(cart).length;
@@ -487,8 +465,11 @@ $HtmlEnd = @"
             text += "------------------\n總金額：NT$ " + total;
 
             navigator.clipboard.writeText(text).then(() => {
-                alert("✅ 已經幫您把【購買清單跟總金額】複製好了！\n\n按下「確定」後，會自動幫您打開 LINE，\n請直接在聊天框「貼上」傳給老闆就好囉！");
-                window.location.href = "$LineLink";
+                // 🔥 終極優化：加入確定與取消雙按鈕的 confirm 視窗
+                let goLine = confirm("✅ 已經幫您把【購買清單跟總金額】複製好了！\n\n按下「確定」會自動幫您打開 LINE 傳送給老闆。\n按下「取消」則留在本網頁繼續逛。");
+                if (goLine) {
+                    window.location.href = "$LineLink";
+                }
             }).catch(err => {
                 alert("❌ 瀏覽器封鎖複製功能，請截圖傳給老闆。");
             });
@@ -523,7 +504,7 @@ try {
     git add .
     git commit -m "Auto-update: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
     git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 完美發布！電腦與手機雙棲排版完成！", 64, "大功告成")
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 完美發布！防綁架跳轉選項已實裝！", 64, "大功告成")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 網頁已生成，但 GitHub 上傳失敗！", 48, "上傳警告")
 }
