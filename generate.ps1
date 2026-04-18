@@ -246,7 +246,7 @@ foreach ($Item in $NewItems) {
 }
 $JsonString = $WebData | ConvertTo-Json -Depth 5 -Compress
 
-# 🔥 純淨 HTML/JS 模板
+# 🔥 純淨 HTML/JS 模板 (終極旗艦版 - 靜態高雅骨架屏)
 $HtmlTemplate = @'
 <!DOCTYPE html>
 <html lang="zh-TW"><head>
@@ -292,9 +292,9 @@ $HtmlTemplate = @'
         .card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.08); }
         @keyframes cardEnter { from { opacity: 0; transform: translateY(30px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
         
-        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+        /* 🔥 A. 穩如泰山：移除閃爍動畫，改為高級靜態深灰底 */
         .img-wrapper { width: 100%; position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 12px; }
-        .main-img-container { width: 85%; max-width: 260px; aspect-ratio: 1/1; position: relative; border-radius: 8px; cursor: zoom-in; background: linear-gradient(90deg, #1a1a1a 25%, #2a2a2a 50%, #1a1a1a 75%); background-size: 200% 100%; animation: shimmer 2s infinite linear; }
+        .main-img-container { width: 85%; max-width: 260px; aspect-ratio: 1/1; position: relative; border-radius: 8px; cursor: zoom-in; background: #1a1a1a; }
         .main-img { width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity 0.4s ease-in-out; }
         .main-img.loaded { opacity: 1; }
         
@@ -302,13 +302,13 @@ $HtmlTemplate = @'
         .badge-new { background: rgba(230, 126, 34, 0.15); color: #e67e22; border: 1px solid rgba(230, 126, 34, 0.4); }
         .badge-used { background: rgba(255, 255, 255, 0.08); color: #cccccc; border: 1px solid rgba(255, 255, 255, 0.2); }
 
-        /* 🔥 終極懸浮預覽：A (Mac Dock 動態放大) + B (發光圓角/明暗對比) + C (智慧滑動) */
+        /* 終極懸浮預覽：(Mac Dock 動態放大) + (發光圓角/明暗對比) + (智慧滑動) */
         .thumb-overlay-container { 
             position: absolute; 
             bottom: 8px; 
             left: 50%; 
             transform: translateX(-50%); 
-            width: 85%; /* 最大寬度，防止超出主圖 */
+            width: 85%; 
             max-width: 220px;
             display: flex;
             justify-content: center;
@@ -326,45 +326,39 @@ $HtmlTemplate = @'
             align-items: center; 
             border: 1px solid rgba(255, 255, 255, 0.15); 
             box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-            /* 滑動功能 */
             overflow-x: auto;
-            scrollbar-width: none; /* Firefox */
-            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none; 
+            -ms-overflow-style: none;  
             scroll-behavior: smooth;
         }
         .thumb-scroll-area::-webkit-scrollbar { display: none; }
         
         .thumb-dot { 
-            /* 圓角與尺寸 */
             flex-shrink: 0;
             width: 26px; 
             height: 26px; 
             background-size: cover; 
             background-position: center; 
-            border-radius: 50%; /* 正圓形更精緻 */
+            border-radius: 50%; 
             cursor: pointer; 
-            /* 明暗對比：預設變暗 */
             filter: brightness(0.6) saturate(0.7);
             border: 2px solid transparent; 
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
             background-color: #111; 
         }
         
-        /* 🔥 Dock 互動：Hover 時放大，並提亮 */
         .thumb-dot:hover { 
             transform: scale(1.3); 
             filter: brightness(1) saturate(1);
             z-index: 2;
         }
         
-        /* 🔥 啟動狀態：發光 + 最亮 + 放大 */
         .thumb-dot.active { 
             filter: brightness(1) saturate(1);
             border-color: rgba(255, 255, 255, 0.9);
             box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
             transform: scale(1.15);
         }
-        /* 當滑鼠經過容器時，稍微縮小 active 的狀態，讓 hovered 的元素更突出 (純 CSS 魔法) */
         .thumb-scroll-area:hover .thumb-dot.active:not(:hover) {
             transform: scale(1);
             box-shadow: none;
@@ -567,7 +561,6 @@ $HtmlTemplate = @'
                 }
                 let titleHtml = conditionBadge ? `<div>${conditionBadge}</div>` : '';
 
-                // 🔥 終極版懸浮縮圖 (A+B+C)
                 let thumbHtml = '';
                 if (item.images.length > 1) {
                     thumbHtml = `
@@ -628,7 +621,6 @@ $HtmlTemplate = @'
             if(overlay) {
                 overlay.querySelectorAll('.thumb-dot').forEach(d => d.classList.remove('active'));
                 
-                // 🔥 自動捲動到被選中的縮圖，確保它在視野內
                 let targetDot = e.target;
                 targetDot.classList.add('active');
                 
@@ -783,7 +775,6 @@ $HtmlTemplate = @'
             });
         });
 
-        // 初始自動依照價格低到高排序
         renderGrid();
     </script>
 </body></html>
@@ -794,8 +785,8 @@ $FinalHtml = $HtmlTemplate.Replace('{{JSON}}', $JsonString).Replace('{{TITLE}}',
 
 try {
     Write-Host "開始上傳至 GitHub..." -ForegroundColor Cyan
-    git add . ; git commit -m "Legendary Thumbnails: Mac Dock + Glow + Scroll" ; git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 恭喜老闆！終極 3 合 1 完美懸浮縮圖已經上線！", 64, "史詩級發布")
+    git add . ; git commit -m "Clean UI: Replaced Shimmer with Static Dark Gray Background" ; git push origin main
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 更新完成！極簡純淨的高級深灰底版已上線！", 64, "大功告成")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 上傳 GitHub 失敗！", 48, "警告")
 }
