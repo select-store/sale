@@ -60,7 +60,7 @@ foreach ($Item in $ExistingItems) {
 
 $Photos = @(); $SeenFiles = @{}
 if (Test-Path $ImageFolder) { 
-    $Found = Get-ChildItem -Path $ImageFolder -Include *.jpg,*.jpeg,*.png,*.gif -Recurse
+    $Found = Get-ChildItem -Path $ImageFolder -Include *.jpg,jpeg,*.png,*.gif -Recurse
     foreach ($img in $Found) {
         $FileNameKey = $img.Name.ToLower()
         if (-not $SeenFiles.ContainsKey($FileNameKey)) { $SeenFiles[$FileNameKey] = $true; $Photos += $img }
@@ -282,12 +282,12 @@ $HtmlTemplate = @'
         .card { background: #1e1e24; display: flex; flex-direction: column; height: 100%; border-radius: 16px; border: 1px solid #2a2a2a; box-sizing: border-box; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; }
         .card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
         
-        /* 🔥 主圖縮小與置中優化 */
-        .img-wrapper { width: 100%; background: #111; padding: 10px 0; position: relative; display: flex; justify-content: center; align-items: center; }
-        .main-img-container { width: 80%; /* 縮小寬度為容器的 80% */ aspect-ratio: 1/1; position: relative; overflow: hidden; border-radius: 8px; cursor: zoom-in; }
+        /* 🔥 主圖縮小極致優化 */
+        .img-wrapper { width: 100%; background: #111; padding: 18px 0; position: relative; display: flex; justify-content: center; align-items: center; }
+        .main-img-container { width: 60%; max-width: 260px; /* 🔥 寬度大幅縮小至 60%，並限制最大尺寸 */ aspect-ratio: 1/1; position: relative; overflow: hidden; border-radius: 8px; cursor: zoom-in; }
         .main-img { width: 100%; height: 100%; object-fit: contain; transition: 0.3s; }
         
-        /* 方案 B：精緻懸浮縮圖 (位置微調以配合縮小的主圖) */
+        /* 精緻懸浮縮圖 */
         .thumb-overlay { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); padding: 5px 10px; border-radius: 16px; z-index: 10; align-items: center; border: 1px solid rgba(255,255,255,0.1); }
         .thumb-dot { width: 24px; height: 24px; background-size: cover; background-position: center; border-radius: 4px; border: 1px solid transparent; cursor: pointer; opacity: 0.6; transition: 0.3s; }
         .thumb-dot:hover, .thumb-dot.active { opacity: 1; border-color: rgba(255,255,255,0.8); transform: scale(1.05); }
@@ -580,6 +580,7 @@ $HtmlTemplate = @'
             });
         });
 
+        // 初始自動依照價格低到高排序
         renderGrid();
     </script>
 </body></html>
@@ -590,8 +591,8 @@ $FinalHtml = $HtmlTemplate.Replace('{{JSON}}', $JsonString).Replace('{{TITLE}}',
 
 try {
     Write-Host "開始上傳至 GitHub..." -ForegroundColor Cyan
-    git add . ; git commit -m "UI Polish: Smaller Main Image" ; git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 更新完成！圖片已經幫你縮身瘦下去了！", 64, "大功告成")
+    git add . ; git commit -m "UI Polish: Shrink Main Image to 60%" ; git push origin main
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 更新完成！主照片已經極致瘦身啦！", 64, "大功告成")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 上傳 GitHub 失敗！", 48, "警告")
 }
