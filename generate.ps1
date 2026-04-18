@@ -292,24 +292,24 @@ $HtmlTemplate = @'
         .btn-reset { background: #3498db; color: #fff; border: none; padding: 12px 28px; border-radius: 24px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: 0.2s; box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3); font-family: 'Noto Sans TC', sans-serif; }
         .btn-reset:hover { background: #2980b9; transform: translateY(-2px); }
 
-        /* 🔥 A. 蘋果風卡片邊緣光暈 + 絲滑進場 */
+        /* 蘋果風卡片邊緣光暈 + 絲滑進場 */
         .card { background: #1e1e24; display: flex; flex-direction: column; height: 100%; border-radius: 16px; border: 1px solid #2a2a2a; box-sizing: border-box; overflow: hidden; transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease; padding: 18px; animation: cardEnter 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; position: relative; }
         .card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.08); }
         @keyframes cardEnter { from { opacity: 0; transform: translateY(30px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
         
-        /* 🔥 D. 骨架屏載入閃爍動畫 */
+        /* 骨架屏載入閃爍動畫 */
         @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
         .img-wrapper { width: 100%; position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 12px; }
         .main-img-container { width: 85%; max-width: 260px; aspect-ratio: 1/1; position: relative; border-radius: 8px; cursor: zoom-in; background: linear-gradient(90deg, #1a1a1a 25%, #2a2a2a 50%, #1a1a1a 75%); background-size: 200% 100%; animation: shimmer 2s infinite linear; }
         
-        /* 🔥 圖片淡入效果 */
+        /* 圖片淡入效果 */
         .main-img { width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity 0.4s ease-in-out; }
         .main-img.loaded { opacity: 1; }
         
-        /* 🔥 B. 質感全新/二手標籤 */
-        .condition-badge { position: absolute; top: 8px; left: 8px; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; z-index: 12; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.1); letter-spacing: 1px; }
-        .badge-new { background: rgba(241, 196, 15, 0.15); color: #f1c40f; }
-        .badge-used { background: rgba(149, 165, 166, 0.15); color: #bdc3c7; }
+        /* 🔥 B. 質感全新/二手標籤 (改為標題上方的實體膠囊) */
+        .condition-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .badge-new { background: #f39c12; color: #111; }
+        .badge-used { background: #7f8c8d; color: #fff; }
 
         /* 懸浮縮圖 */
         .thumb-overlay { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; background: rgba(20, 20, 20, 0.65); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 5px 10px; border-radius: 16px; z-index: 10; align-items: center; border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
@@ -354,8 +354,8 @@ $HtmlTemplate = @'
         #lb-close { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.1); width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: white; border: none; font-size: 1.5rem; cursor: pointer; z-index: 10001; transition: 0.3s; backdrop-filter: blur(4px); }
         #lb-close:hover { background: rgba(255,255,255,0.3); }
 
-        /* 🔥 C. iOS 動態島通知 (動態膠囊 Toast) */
-        #toast { visibility: hidden; min-width: auto; background: rgba(30, 30, 30, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: #fff; text-align: center; border-radius: 30px; padding: 12px 24px; position: fixed; z-index: 10000; left: 50%; top: 30px; font-size: 1rem; transform: translate(-50%, -20px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); font-weight: bold; border: 1px solid rgba(255,255,255,0.1); pointer-events: none; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+        /* 🔥 C. iOS 動態島通知 (移到底部，由下往上滑出) */
+        #toast { visibility: hidden; min-width: auto; background: rgba(30, 30, 30, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: #fff; text-align: center; border-radius: 30px; padding: 12px 24px; position: fixed; z-index: 10000; left: 50%; bottom: 100px; font-size: 1rem; transform: translate(-50%, 20px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); font-weight: bold; border: 1px solid rgba(255,255,255,0.1); pointer-events: none; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
         #toast.show { visibility: visible; opacity: 1; transform: translate(-50%, 0); }
         
         /* 底部導覽列與 Q 彈動畫 */
@@ -399,6 +399,7 @@ $HtmlTemplate = @'
             .bottom-btn { border-radius: 50px; padding: 14px 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border: none; flex: none; width: auto; }
             .btn-cart { border-right: none; transform-origin: center center; }
             #btt-btn { bottom: 110px; right: 35px; width: 50px; height: 50px; font-size: 1.5rem; }
+            #toast { bottom: 40px; } /* 電腦版不被導覽列干擾，可放低一點 */
             .modal-overlay { align-items: center; }
             .modal-content { border-radius: 20px; transform: scale(0.9); }
             .modal-overlay.show .modal-content { transform: scale(1); }
@@ -516,13 +517,14 @@ $HtmlTemplate = @'
                     : `<span class="price"><span class="currency">NT$</span>${item.price}</span>`;
                 const urlHtml = item.url ? `<a href="${item.url}" target="_blank" class="ref-link">🔗 原廠參考網址</a>` : '';
                 
-                // 🔥 B. 自動判斷加上「全新/二手」標籤
+                // 🔥 B. 移出圖片的質感「全新/二手」標籤
                 let conditionBadge = '';
                 if (item.desc.includes('全新')) {
-                    conditionBadge = `<div class="condition-badge badge-new">✨ 全新</div>`;
+                    conditionBadge = `<span class="condition-badge badge-new">✨ 全新</span>`;
                 } else if (item.desc.includes('二手')) {
-                    conditionBadge = `<div class="condition-badge badge-used">♻️ 二手</div>`;
+                    conditionBadge = `<span class="condition-badge badge-used">♻️ 二手</span>`;
                 }
+                let titleHtml = conditionBadge ? `<div style="margin-bottom: 6px;">${conditionBadge}</div>` : '';
 
                 let thumbHtml = '';
                 if (item.images.length > 1) {
@@ -535,17 +537,16 @@ $HtmlTemplate = @'
                     ? `<button class="btn-add btn-sold" onclick="showToast('此商品已售出，下次請早！', '🚫')">🚫 已售出</button>`
                     : `<button class="btn-add" onclick="toggleCart('${item.name.replace(/'/g, "\\'")}', ${item.num_price}, this)" style="background:${cart[item.name] ? '#e67e22' : '#3498db'}">${cart[item.name] ? '✅ 已加入購買清單' : '➕ 加入購買清單'}</button>`;
 
-                // 🔥 onload="this.classList.add('loaded')" 配合骨架屏動畫
                 card.innerHTML = `
                     <div class="img-wrapper">
                         <div class="main-img-container" onclick="openBox(${rawIdx})">
-                            ${conditionBadge}
                             <div class="sold-badge">已售出</div>
                             <img class="main-img" id="main-img-${rawIdx}" src="${item.images[currentImgIdx]}" onload="this.classList.add('loaded')">
                         </div>
                         ${thumbHtml}
                     </div>
                     <div class="info">
+                        ${titleHtml}
                         <h3>${item.name}</h3>
                         <div class="price-container">${priceHtml}</div>
                         <p class="desc">${item.desc}</p>
@@ -706,7 +707,7 @@ $HtmlTemplate = @'
             });
         }
 
-        // 🔥 C. 動態島 Toast 通知
+        // 🔥 C. 動態島 Toast 通知 (移到底部並往上滑出)
         function showToast(msg, icon = '🔔') { 
             let t = document.getElementById('toast'); 
             t.innerHTML = `<span style="font-size:1.2rem">${icon}</span> <span>${msg}</span>`;
@@ -745,8 +746,8 @@ $FinalHtml = $HtmlTemplate.Replace('{{JSON}}', $JsonString).Replace('{{TITLE}}',
 
 try {
     Write-Host "開始上傳至 GitHub..." -ForegroundColor Cyan
-    git add . ; git commit -m "Legendary Edition: Apple Glow, Dynamic Toast, Skeleton Loader" ; git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 封神啦老闆！這已經是百萬級別的電商體驗了！", 64, "終極傳說版發布")
+    git add . ; git commit -m "Fix UI: Move Badge to Title & Toast to Bottom" ; git push origin main
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 更新完成！標籤與通知的位置已經完美搞定！", 64, "終極傳說版更新")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 上傳 GitHub 失敗！", 48, "警告")
 }
