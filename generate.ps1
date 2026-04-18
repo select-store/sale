@@ -290,7 +290,7 @@ $HtmlStart = @"
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>$ShopTitle</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #eee; margin: 0; padding-bottom: 70px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #eee; margin: 0; padding-bottom: 80px; }
         .search-container { padding: 10px; background: #1e1e1e; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #333; }
         #searchInput { width: 100%; max-width: 800px; margin: 0 auto; display: block; padding: 14px 20px; border: 1px solid #444; border-radius: 25px; background: #222; color: #fff; box-sizing: border-box; font-size: 1rem; }
         .filter-container { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding: 15px 10px; }
@@ -326,13 +326,21 @@ $HtmlStart = @"
         #toast { visibility: hidden; min-width: 250px; background-color: rgba(30, 30, 30, 0.95); color: #fff; text-align: center; border-radius: 8px; padding: 14px 24px; position: fixed; z-index: 10000; left: 50%; bottom: 90px; font-size: 1.1rem; transform: translateX(-50%); box-shadow: 0 4px 12px rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.3s; font-weight: bold; border: 1px solid #555; pointer-events: none; }
         #toast.show { visibility: visible; opacity: 1; }
         
-        /* 🔥 APP 級別底部導覽列 */
-        .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; display: flex; z-index: 1000; box-shadow: 0 -4px 15px rgba(0,0,0,0.5); }
-        .bottom-btn { flex: 1; padding: 18px 0; text-align: center; font-size: 1.1rem; font-weight: bold; cursor: pointer; border: none; outline: none; text-decoration: none; }
+        /* 🔥 手機版底部導覽列 */
+        .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; display: flex; z-index: 1000; box-shadow: 0 -4px 15px rgba(0,0,0,0.5); pointer-events: none; }
+        .bottom-btn { pointer-events: auto; flex: 1; padding: 18px 0; text-align: center; font-size: 1.1rem; font-weight: bold; cursor: pointer; border: none; outline: none; text-decoration: none; }
         .btn-cart { background: #e74c3c; color: white; transition: background 0.3s; border-right: 1px solid #c0392b; }
         .btn-cart:hover { background: #c0392b; }
         .btn-line { background: #06C755; color: white; transition: background 0.3s; display: flex; align-items: center; justify-content: center; }
         .btn-line:hover { background: #05b04a; }
+
+        /* 🔥 電腦版恢復懸浮 */
+        @media (min-width: 768px) {
+            body { padding-bottom: 0; }
+            .bottom-bar { bottom: 30px; right: 30px; left: auto; width: auto; flex-direction: column; gap: 15px; box-shadow: none; }
+            .bottom-btn { border-radius: 50px; padding: 15px 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: none; flex: none; width: auto; }
+            .btn-cart { border-right: none; }
+        }
     </style>
 </head><body>
     <div class="search-container"><input type="text" id="searchInput" placeholder="🔍 搜尋商品或描述..."></div>
@@ -465,9 +473,10 @@ $HtmlEnd = @"
             text += "------------------\n總金額：NT$ " + total;
 
             navigator.clipboard.writeText(text).then(() => {
-                // 🔥 終極優化：加入確定與取消雙按鈕的 confirm 視窗
-                let goLine = confirm("✅ 已經幫您把【購買清單跟總金額】複製好了！\n\n按下「確定」會自動幫您打開 LINE 傳送給老闆。\n按下「取消」則留在本網頁繼續逛。");
+                let goLine = confirm("✅ 【購買清單與金額】已經自動複製好囉！\n\n👉 按下「確定」：為您打開 LINE\n👉 按下「取消」：留在本網頁繼續逛");
                 if (goLine) {
+                    // 🔥 跳轉 LINE 前的最後防呆小提醒
+                    alert("💡 貼心小提醒：\n\n跳轉到 LINE 之後，請記得在打字框【長按 ➜ 選擇貼上】，把購買明細傳給老闆才算完成喔！");
                     window.location.href = "$LineLink";
                 }
             }).catch(err => {
@@ -504,7 +513,7 @@ try {
     git add .
     git commit -m "Auto-update: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
     git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 完美發布！防綁架跳轉選項已實裝！", 64, "大功告成")
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 發布成功！貼心小提醒功能已上線！", 64, "大功告成")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 網頁已生成，但 GitHub 上傳失敗！", 48, "上傳警告")
 }
