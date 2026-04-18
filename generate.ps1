@@ -173,7 +173,7 @@ $formManage.Size = "1100,600"; $formManage.StartPosition = "CenterScreen"; $form
 $grid = New-Object System.Windows.Forms.DataGridView; $grid.DataSource = $dt; $grid.Dock = "Fill"; $grid.AutoSizeColumnsMode = "Fill"; $grid.AllowUserToAddRows = $false; $grid.RowHeadersVisible = $false
 $formManage.Controls.Add($grid)
 
-# 🔥 實作置頂最多 2 個的防呆機制
+# 實作置頂最多 2 個的防呆機制
 $grid.add_CurrentCellDirtyStateChanged({
     if ($grid.IsCurrentCellDirty) { $grid.CommitEdit([System.Windows.Forms.DataGridViewDataErrorContexts]::Commit) }
 })
@@ -273,7 +273,7 @@ foreach ($Item in $NewItems) {
 }
 $JsonString = $WebData | ConvertTo-Json -Depth 5 -Compress
 
-# 🔥 純淨 HTML/JS 模板 (加入置頂 UI)
+# 🔥 純淨 HTML/JS 模板 (加入置頂 UI 且優化對比)
 $HtmlTemplate = @'
 <!DOCTYPE html>
 <html lang="zh-TW"><head>
@@ -317,20 +317,13 @@ $HtmlTemplate = @'
         .card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.08); }
         @keyframes cardEnter { from { opacity: 0; transform: translateY(30px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
         
-        /* 🔥 A. 尊榮高調置頂 (電腦手機通用 CSS) */
+        /* 尊榮高調置頂 (電腦手機通用 CSS) */
         .card.pinned { 
             border-color: rgba(241, 196, 15, 0.5); 
             box-shadow: 0 4px 20px rgba(241, 196, 15, 0.08); 
         }
         .card.pinned:hover { 
             box-shadow: 0 12px 32px rgba(241, 196, 15, 0.2), inset 0 0 0 1px rgba(241, 196, 15, 0.6); 
-        }
-        /* 置頂標籤 - 放在圖片右上角 */
-        .pin-badge { 
-            position: absolute; top: 8px; right: 8px; 
-            background: linear-gradient(135deg, #f1c40f, #e67e22); 
-            color: #111; padding: 4px 10px; font-weight: 900; font-size: 0.75rem; 
-            border-radius: 8px; z-index: 12; box-shadow: 0 4px 10px rgba(0,0,0,0.5); letter-spacing: 1px; 
         }
         
         .img-wrapper { width: 100%; position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 10px; }
@@ -342,6 +335,17 @@ $HtmlTemplate = @'
         .badge-new { background: rgba(230, 126, 34, 0.15); color: #e67e22; border: 1px solid rgba(230, 126, 34, 0.4); }
         .badge-used { background: rgba(255, 255, 255, 0.08); color: #cccccc; border: 1px solid rgba(255, 255, 255, 0.2); }
 
+        /* 🔥 A. 尊榮高調置頂標籤 (放在全新圖標左邊，優化顏色對比) */
+        .badge-row { display: flex; gap: 6px; align-items: center; } /* 圖標並排的容器 */
+        .pin-badge { 
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 2px 8px; border-radius: 4px; font-weight: 900; font-size: 0.65rem; letter-spacing: 1px;
+            background: linear-gradient(135deg, #f1c40f, #e67e22); 
+            color: #fff; /* 🔥 優化對比：黑色改白色 */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5); 
+        }
+        .pin-badge i { font-style: normal; } /* 火焰圖標也是白色 */
+        
         .thumb-overlay-container { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); width: 90%; display: flex; justify-content: center; z-index: 10; }
         .thumb-scroll-area { display: flex; gap: 4px; background: rgba(20, 20, 20, 0.65); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 4px 8px; border-radius: 20px; align-items: center; border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.5); overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; scroll-behavior: smooth; }
         .thumb-dot { flex-shrink: 0; width: 20px; height: 20px; background-size: cover; background-position: center; border-radius: 50%; cursor: pointer; filter: brightness(0.6) saturate(0.7); border: 2px solid transparent; transition: all 0.3s; background-color: #111; }
@@ -426,6 +430,7 @@ $HtmlTemplate = @'
             .old-price { font-size: 0.9rem; }
             .desc { font-size: 0.9rem; -webkit-line-clamp: 3; margin-bottom: 12px; }
             .condition-badge { font-size: 0.75rem; padding: 4px 10px; }
+            .pin-badge { font-size: 0.75rem; padding: 4px 10px; border-radius: 6px; } /* 🔥桌機版標籤稍微大一點 */
             .thumb-dot { width: 24px; height: 24px; }
             .btn-add { font-size: 1rem; padding: 12px; }
             
@@ -541,7 +546,6 @@ $HtmlTemplate = @'
                 return matchSearch && matchTag;
             });
             
-            // 🔥 排序邏輯加入「置頂優先」
             filtered.sort((a, b) => {
                 if (a.is_pinned !== b.is_pinned) {
                     return a.is_pinned ? -1 : 1; 
@@ -571,7 +575,6 @@ $HtmlTemplate = @'
                 const card = document.createElement('div');
                 card.className = 'card';
                 if (item.is_sold) card.classList.add('sold-out');
-                // 🔥 加入置頂的專屬 class
                 if (item.is_pinned) card.classList.add('pinned');
                 card.style.animationDelay = `${Math.min(renderIndex * 0.05, 0.4)}s`;
                 
@@ -586,10 +589,10 @@ $HtmlTemplate = @'
                 } else if (item.desc.includes('二手')) {
                     conditionBadge = `<span class="condition-badge badge-used">♻️ 二手</span>`;
                 }
-                let titleHtml = conditionBadge ? `<div>${conditionBadge}</div>` : '';
-
-                // 🔥 置頂標籤
-                let pinBadge = item.is_pinned ? `<div class="pin-badge">🔥 精選</div>` : '';
+                
+                // 🔥 A. 尊榮高調置頂標籤 (優化配色，放在全新左邊)
+                let pinBadgeHtml = item.is_pinned ? `<div class="pin-badge"><i>🔥</i>精選</div>` : '';
+                let statusHeaderHtml = (pinBadgeHtml || conditionBadge) ? `<div class="badge-row">${pinBadgeHtml}${conditionBadge}</div>` : '';
 
                 let thumbHtml = '';
                 if (item.images.length > 1) {
@@ -609,14 +612,13 @@ $HtmlTemplate = @'
                 card.innerHTML = `
                     <div class="img-wrapper">
                         <div class="main-img-container" onclick="openBox(${rawIdx})">
-                            ${pinBadge}
                             <div class="sold-badge">售出</div>
                             <img class="main-img" id="main-img-${rawIdx}" src="${item.images[currentImgIdx]}" onload="this.classList.add('loaded')">
                         </div>
                         ${thumbHtml}
                     </div>
                     <div class="info">
-                        ${titleHtml}
+                        ${statusHeaderHtml}
                         <h3>${item.name}</h3>
                         <div class="price-container">${priceHtml}</div>
                         <p class="desc">${item.desc}</p>
@@ -835,8 +837,8 @@ $FinalHtml = $HtmlTemplate.Replace('{{JSON}}', $JsonString).Replace('{{TITLE}}',
 
 try {
     Write-Host "開始上傳至 GitHub..." -ForegroundColor Cyan
-    git add . ; git commit -m "Feature: Pinned Items with Responsive Premium UI" ; git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 大功告成！置頂功能已經完美實裝，趕快去勾選看看吧！", 64, "功能上線")
+    git add . ; git commit -m "UI Optimization: Pinned Badge Repositioned and Color Contrast Enhanced" ; git push origin main
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 完美呈現！精選圖標已移至左側，且顏色對比已優化！", 64, "介面優化完成")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 上傳 GitHub 失敗！", 48, "警告")
 }
