@@ -10,10 +10,12 @@ Add-Type -AssemblyName System.Data
 
 # ================= 設定區 =================
 $LineLink = "https://lin.ee/7NldLO6"
+# 🔥 已經幫你綁定專屬 LINE 官方帳號！電腦版結帳將直通對話框！
+$LineID   = "@917cytma" 
+
 $ImageFolder = Join-Path $ScriptDir "images"
 $CsvPath = Join-Path $ScriptDir "items.csv"
 $ShopTitle = "📦 質感小物出清"
-$ShopDesc  = "全新與二手好物特賣，點擊進來挖寶！"
 $SiteUrl   = "https://select-store.github.io/sale/" 
 # =========================================
 
@@ -199,7 +201,7 @@ $formManage.Dispose()
 
 $NewItems | Select-Object -Unique name, price, sale_price, desc, url, image | Export-Csv -Path $CsvPath -Encoding UTF8 -NoTypeInformation -Force
 
-# ================= 網頁生成 (純 MVC 架構) =================
+# ================= 網頁生成 (MVC 架構) =================
 $CacheBuster = (Get-Date).ToString("yyyyMMddHHmmss")
 function Optimize-ImageToBase64 {
     param([string]$Path)
@@ -215,7 +217,7 @@ function Optimize-ImageToBase64 {
     } catch { return $null }
 }
 
-Write-Host "🔄 正在打包商品資料 (MVC)..." -ForegroundColor Yellow
+Write-Host "🔄 正在打包商品資料..." -ForegroundColor Yellow
 $WebData = @()
 foreach ($Item in $NewItems) {
     if ($Item.desc -match "\[下架\]") { continue }
@@ -254,12 +256,20 @@ $HtmlTemplate = @'
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #eee; margin: 0; padding-bottom: 80px; }
-        .top-nav { background: #1e1e1e; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #333; padding: 10px; }
-        .search-box { width: 100%; max-width: 800px; margin: 0 auto 10px; display: block; padding: 14px 20px; border: 1px solid #444; border-radius: 25px; background: #222; color: #fff; box-sizing: border-box; font-size: 1rem; }
-        .filter-container { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; }
-        .filter-btn { background: #333; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; color: #ccc; font-size: 0.9rem; }
+        .top-nav { background: #1e1e1e; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #333; padding: 15px 10px; }
+        .search-box { width: 100%; max-width: 800px; margin: 0 auto 15px; display: block; padding: 14px 20px; border: 1px solid #444; border-radius: 25px; background: #222; color: #fff; box-sizing: border-box; font-size: 1rem; }
+        
+        .filter-container { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; max-width: 1000px; margin: 0 auto; }
+        .btn-group { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+        .filter-divider { width: 2px; height: 24px; background: #444; margin: 0 5px; border-radius: 2px; }
+        
+        .filter-btn { background: #333; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; color: #ccc; font-size: 0.9rem; transition: 0.2s; }
         .filter-btn.active { background: #3498db; color: white; }
-        .sort-select { background: #222; color: #fff; border: 1px solid #555; padding: 8px 12px; border-radius: 8px; font-size: 0.9rem; outline: none; cursor: pointer; }
+        
+        .sort-btn { background: #2c3e50; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; color: #ccc; font-size: 0.9rem; transition: 0.2s; }
+        .sort-btn.active { background: #e67e22; color: white; font-weight: bold; }
+
+        @media (max-width: 600px) { .filter-divider { display: none; } }
         
         .grid-container { display: grid; grid-template-columns: 1fr; gap: 16px; padding: 16px; max-width: 1600px; margin: 0 auto; }
         @media (min-width: 550px) { .grid-container { grid-template-columns: repeat(2, 1fr); gap: 16px; } }
@@ -303,7 +313,7 @@ $HtmlTemplate = @'
             .btn-cart { border-right: none; }
         }
 
-        /* 🔥 隱藏的明細截圖區 */
+        /* 明細截圖區 */
         #receipt-container { position: absolute; top: -9999px; left: -9999px; }
         #receipt { width: 400px; background: #fff; color: #111; padding: 30px; font-family: sans-serif; box-sizing: border-box; border-top: 10px solid #e74c3c; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
         .receipt-title { text-align: center; font-size: 1.5rem; font-weight: bold; margin: 0 0 5px; color: #333; }
@@ -316,18 +326,24 @@ $HtmlTemplate = @'
     </style>
 </head><body>
     <div class="top-nav">
-        <input type="text" id="searchInput" placeholder="🔍 搜尋商品或描述...">
+        <input type="text" id="searchInput" class="search-box" placeholder="🔍 搜尋商品或描述...">
+        
         <div class="filter-container">
-            <button class="filter-btn active" data-tag="all">全部</button>
-            <button class="filter-btn" data-tag="未售出">#未售出</button>
-            <button class="filter-btn" data-tag="已售出">#已售出</button>
-            <button class="filter-btn" data-tag="全新">#全新</button>
-            <button class="filter-btn" data-tag="二手">#二手</button>
-            <select id="sortSelect" class="sort-select">
-                <option value="default">預設排序</option>
-                <option value="asc">價格：由低到高</option>
-                <option value="desc">價格：由高到低</option>
-            </select>
+            <div class="btn-group">
+                <button class="filter-btn active" data-tag="all">全部</button>
+                <button class="filter-btn" data-tag="未售出">#未售出</button>
+                <button class="filter-btn" data-tag="已售出">#已售出</button>
+                <button class="filter-btn" data-tag="全新">#全新</button>
+                <button class="filter-btn" data-tag="二手">#二手</button>
+            </div>
+            
+            <div class="filter-divider"></div>
+            
+            <div class="btn-group">
+                <button class="sort-btn active" data-sort="default">預設排序</button>
+                <button class="sort-btn" data-sort="asc">價格低 ⭡</button>
+                <button class="sort-btn" data-sort="desc">價格高 ⭣</button>
+            </div>
         </div>
     </div>
     
@@ -335,7 +351,7 @@ $HtmlTemplate = @'
     
     <div class="bottom-bar">
         <button id="cartBtn" class="bottom-btn btn-cart" onclick="checkout()">📝 結帳明細 (0件)</button>
-        <a href="{{LINE}}" class="bottom-btn btn-line" target="_blank">💬 聯絡老闆 (LINE)</a>
+        <a href="javascript:void(0)" onclick="openLine()" class="bottom-btn btn-line">💬 聯絡老闆 (LINE)</a>
     </div>
 
     <div id="receipt-container">
@@ -355,16 +371,15 @@ $HtmlTemplate = @'
     <div id="toast"></div>
 
     <script>
-        // 💡 MVC 架構核心：從 PowerShell 接收乾淨資料
         const RAW_DATA = {{JSON}};
         let cart = {};
         let activeFilters = new Set();
+        let activeSort = 'default';
         
         function renderGrid() {
             const grid = document.getElementById('productGrid');
             grid.innerHTML = '';
             
-            // 1. 搜尋與標籤過濾
             const search = document.getElementById('searchInput').value.toLowerCase();
             let filtered = RAW_DATA.filter(item => {
                 const tags = (item.is_sold ? "已售出" : "未售出") + " " + item.desc + " " + item.name;
@@ -373,12 +388,9 @@ $HtmlTemplate = @'
                 return matchSearch && matchTag;
             });
             
-            // 2. 價格排序
-            const sortType = document.getElementById('sortSelect').value;
-            if (sortType === 'asc') filtered.sort((a,b) => a.num_price - b.num_price);
-            if (sortType === 'desc') filtered.sort((a,b) => b.num_price - a.num_price);
+            if (activeSort === 'asc') filtered.sort((a,b) => a.num_price - b.num_price);
+            if (activeSort === 'desc') filtered.sort((a,b) => b.num_price - a.num_price);
 
-            // 3. 畫出商品卡片
             filtered.forEach(item => {
                 const card = document.createElement('div');
                 card.className = item.is_sold ? 'card sold-out' : 'card';
@@ -417,13 +429,26 @@ $HtmlTemplate = @'
             });
         }
 
-        // 🛒 購物車與截圖功能
         function toggleCart(name, price, btn) {
             event.stopPropagation();
             if (cart[name]) { delete cart[name]; } else { cart[name] = price; }
             renderGrid();
             let count = Object.keys(cart).length;
             document.getElementById('cartBtn').innerText = '📝 結帳明細 (' + count + '件)';
+        }
+
+        // 🔥 LINE 智慧跳轉判斷
+        function openLine() {
+            let isDesktop = !/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            let rawId = "{{LINE_ID}}".trim();
+            
+            if (isDesktop && rawId !== "") {
+                let prefix = rawId.startsWith('@') ? '' : '~';
+                let cleanId = rawId.replace('@', '');
+                window.location.href = 'line://ti/p/' + prefix + cleanId;
+            } else {
+                window.location.href = '{{LINE_LINK}}';
+            }
         }
 
         function checkout() {
@@ -434,7 +459,6 @@ $HtmlTemplate = @'
             let originalText = btn.innerText;
             btn.innerText = '⏳ 正在產生明細圖片...';
 
-            // 準備明細內容
             document.getElementById('receiptDate').innerText = new Date().toLocaleString('zh-TW');
             let rItems = document.getElementById('receiptItems');
             rItems.innerHTML = '';
@@ -445,32 +469,28 @@ $HtmlTemplate = @'
             });
             document.getElementById('receiptTotal').innerText = total;
 
-            // 呼叫 html2canvas 拍照
             html2canvas(document.getElementById('receipt'), {scale: 2, backgroundColor: "#ffffff"}).then(canvas => {
                 btn.innerText = originalText;
                 canvas.toBlob(blob => {
                     let file = new File([blob], "購買明細.png", {type: "image/png"});
                     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                        // 手機版原生分享
                         navigator.share({ files: [file], title: '購買明細' })
                         .then(() => {
-                            if(confirm("✅ 明細已分享！\n需要跳轉至 LINE 聊天室聯絡老闆嗎？")) window.location.href = "{{LINE}}";
+                            if(confirm("✅ 明細已分享！\n需要跳轉至 LINE 聊天室聯絡老闆嗎？")) openLine();
                         }).catch(console.error);
                     } else {
-                        // 電腦版下載
                         let link = document.createElement('a');
                         link.download = '購買明細.png';
                         link.href = canvas.toDataURL("image/png");
                         link.click();
                         if(confirm("✅ 【購買明細】圖片已自動下載！\n\n👉 按下「確定」：為您打開 LINE\n👉 進入 LINE 後，請點選「傳送照片」把剛下載的明細發給老闆喔！")) {
-                            window.location.href = "{{LINE}}";
+                            openLine();
                         }
                     }
                 });
             });
         }
 
-        // UI 互動
         function showToast(msg) { let t = document.getElementById('toast'); t.innerText = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
         function changeImg(t){ let m = t.closest('.card').querySelector('.main-img'); m.src=t.src; m.setAttribute('data-highres', t.getAttribute('data-highres')); }
         function openBox(img){ 
@@ -480,9 +500,8 @@ $HtmlTemplate = @'
             else { bImg.src=img.src; bImg.style.display='block'; }
         }
         
-        // 監聽器註冊
         document.getElementById('searchInput').addEventListener('input', renderGrid);
-        document.getElementById('sortSelect').addEventListener('change', renderGrid);
+        
         document.querySelectorAll('.filter-btn').forEach(btn => { 
             btn.addEventListener('click', function() { 
                 const tag = this.dataset.tag; 
@@ -492,20 +511,27 @@ $HtmlTemplate = @'
             }); 
         });
 
-        // 初始渲染
+        document.querySelectorAll('.sort-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                activeSort = this.dataset.sort;
+                renderGrid();
+            });
+        });
+
         renderGrid();
     </script>
 </body></html>
 '@
 
-$FinalHtml = $HtmlTemplate.Replace('{{JSON}}', $JsonString).Replace('{{TITLE}}', $ShopTitle).Replace('{{LINE}}', $LineLink)
+$FinalHtml = $HtmlTemplate.Replace('{{JSON}}', $JsonString).Replace('{{TITLE}}', $ShopTitle).Replace('{{LINE_LINK}}', $LineLink).Replace('{{LINE_ID}}', $LineID)
 [System.IO.File]::WriteAllText((Join-Path $ScriptDir "index.html"), $FinalHtml, [System.Text.Encoding]::UTF8)
 
-# ==== 🚀 自動上傳 ====
 try {
     Write-Host "開始上傳至 GitHub..." -ForegroundColor Cyan
-    git add . ; git commit -m "MVC & Features Update" ; git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 完美發布！排序與明細截圖功能已強勢上線！", 64, "大功告成")
+    git add . ; git commit -m "UI Fix & Line update" ; git push origin main
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 更新完成！", 64, "大功告成")
 } catch {
-    [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 網頁已生成，但 GitHub 上傳失敗！", 48, "上傳警告")
+    [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 上傳 GitHub 失敗！", 48, "警告")
 }
