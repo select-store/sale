@@ -78,7 +78,7 @@ foreach ($Photo in $Photos) {
     $GroupedProducts[$ProductName] += "images\$($Photo.Name)"
 }
 
-# 4. 核心建檔邏輯 (修復單一圖片字串黏著 Bug)
+# 4. 核心建檔邏輯 
 $NewItems = @()
 $ProcessedNames = @{} 
 
@@ -94,7 +94,6 @@ foreach ($Key in $GroupedProducts.Keys) {
     
     if ($null -ne $MatchedItem) {
         if (-not $ProcessedNames.ContainsKey($MatchedItem.name)) {
-            # 🔥 強制轉換為陣列，防止字串黏合
             $OldArray = @()
             if ($MatchedItem.image) { $OldArray = @($MatchedItem.image -split '\|') }
             $MergedArray = @()
@@ -152,7 +151,6 @@ foreach ($Key in $GroupedProducts.Keys) {
                 $selName = $lb.SelectedItem.ToString()
                 $targetItem = $ExistingMap[$selName]
                 
-                # 🔥 強制轉換為陣列，防止字串黏合
                 $OldArray = @()
                 if ($targetItem.image) { $OldArray = @($targetItem.image -split '\|') }
                 $MergedArray = @()
@@ -179,7 +177,7 @@ foreach ($Item in $ExistingItems) {
     }
 }
 
-# ⭐️ 終極管理中心 (取代原本的庫存盤點)
+# ⭐️ 終極管理中心
 $dt = New-Object System.Data.DataTable
 $dt.Columns.Add("售出", [bool]) | Out-Null
 $dt.Columns.Add("商品名稱", [string]) | Out-Null
@@ -202,7 +200,7 @@ foreach ($Item in $NewItems) {
 }
 
 $formManage = New-Object System.Windows.Forms.Form
-$formManage.Text = "📊 商品管理中心 (可以直接在格子裡修改價錢與介紹，打勾代表售出)"
+$formManage.Text = "📊 商品管理中心 (可以直接在格子裡修改名稱、價錢與介紹，打勾代表售出)"
 $formManage.Size = New-Object System.Drawing.Size(1000, 600)
 $formManage.StartPosition = "CenterScreen"
 $formManage.Font = New-Object System.Drawing.Font("微軟正黑體", 10)
@@ -215,11 +213,9 @@ $grid.AllowUserToAddRows = $false
 $grid.RowHeadersVisible = $false
 $formManage.Controls.Add($grid)
 
-# 隱藏圖片路徑，並保護商品名稱不被誤改
+# 🔥 已經解除商品名稱的鎖定，你可以隨意點進去修改了！
 $formManage.add_Shown({
     $grid.Columns["圖片路徑"].Visible = $false
-    $grid.Columns["商品名稱"].ReadOnly = $true
-    $grid.Columns["商品名稱"].DefaultCellStyle.BackColor = [System.Drawing.Color]::LightGray
 })
 
 $panel = New-Object System.Windows.Forms.Panel
@@ -237,13 +233,13 @@ $formManage.Controls.Add($panel)
 $formManage.AcceptButton = $btnSaveManage
 
 if ($formManage.ShowDialog() -eq "OK") {
-    $NewItems = @() # 清空陣列，準備接收修改後的新資料
+    $NewItems = @() 
     foreach ($row in $dt.Rows) {
         $finalDesc = $row["商品描述"].ToString()
         if ($row["售出"]) { $finalDesc = "[售出] " + $finalDesc }
         
         $NewItems += [PSCustomObject]@{
-            name       = $row["商品名稱"].ToString()
+            name       = $row["商品名稱"].ToString().Trim()
             price      = $row["原價"].ToString()
             sale_price = $row["特價"].ToString()
             desc       = $finalDesc
