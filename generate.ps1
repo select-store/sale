@@ -177,8 +177,9 @@ foreach ($Item in $ExistingItems) {
     }
 }
 
-# ⭐️ 終極管理中心
+# ⭐️ 終極管理中心 (加入「徹底刪除」功能)
 $dt = New-Object System.Data.DataTable
+$dt.Columns.Add("徹底刪除", [bool]) | Out-Null  # 🔥 殺無赦按鈕
 $dt.Columns.Add("售出", [bool]) | Out-Null
 $dt.Columns.Add("商品名稱", [string]) | Out-Null
 $dt.Columns.Add("原價", [string]) | Out-Null
@@ -189,19 +190,20 @@ $dt.Columns.Add("圖片路徑", [string]) | Out-Null
 
 foreach ($Item in $NewItems) {
     $row = $dt.NewRow()
+    $row["徹底刪除"] = $false # 預設當然是不刪除
     $row["售出"] = ($Item.desc -match "\[售出\]")
     $row["商品名稱"] = $Item.name
     $row["原價"] = $Item.price
     $row["特價"] = $Item.sale_price
-    $row["商品描述"] = $Item.desc -replace "\[售出\]\s*", ""
+    $row["商品描述"] = $Item.desc -replace "\[售出\]\s*", "" -replace "\[下架\]\s*", "" 
     $row["參考網址"] = $Item.url
     $row["圖片路徑"] = $Item.image
     $dt.Rows.Add($row)
 }
 
 $formManage = New-Object System.Windows.Forms.Form
-$formManage.Text = "📊 商品管理中心 (可以直接在格子裡修改名稱、價錢與介紹，打勾代表售出)"
-$formManage.Size = New-Object System.Drawing.Size(1000, 600)
+$formManage.Text = "📊 商品管理中心 (打勾「徹底刪除」將把商品從資料庫永遠抹除！)"
+$formManage.Size = New-Object System.Drawing.Size(1050, 600)
 $formManage.StartPosition = "CenterScreen"
 $formManage.Font = New-Object System.Drawing.Font("微軟正黑體", 10)
 
@@ -213,9 +215,20 @@ $grid.AllowUserToAddRows = $false
 $grid.RowHeadersVisible = $false
 $formManage.Controls.Add($grid)
 
-# 🔥 已經解除商品名稱的鎖定，你可以隨意點進去修改了！
 $formManage.add_Shown({
     $grid.Columns["圖片路徑"].Visible = $false
+    
+    # 調整欄位寬度
+    $grid.Columns["徹底刪除"].FillWeight = 35
+    $grid.Columns["售出"].FillWeight = 25
+    $grid.Columns["商品名稱"].FillWeight = 80
+    $grid.Columns["原價"].FillWeight = 30
+    $grid.Columns["特價"].FillWeight = 30
+    $grid.Columns["商品描述"].FillWeight = 120
+    $grid.Columns["參考網址"].FillWeight = 50
+    
+    # 把刪除那欄弄成紅色警告感覺
+    $grid.Columns["徹底刪除"].DefaultCellStyle.BackColor = [System.Drawing.Color]::MistyRose
 })
 
 $panel = New-Object System.Windows.Forms.Panel
@@ -225,7 +238,7 @@ $panel.Height = 60
 $btnSaveManage = New-Object System.Windows.Forms.Button
 $btnSaveManage.Text = "💾 存檔並發布網頁"
 $btnSaveManage.Size = New-Object System.Drawing.Size(200, 40)
-$btnSaveManage.Location = New-Object System.Drawing.Point(390, 10)
+$btnSaveManage.Location = New-Object System.Drawing.Point(420, 10)
 $btnSaveManage.BackColor = "LightBlue"
 $btnSaveManage.DialogResult = "OK"
 $panel.Controls.Add($btnSaveManage)
@@ -233,12 +246,17 @@ $formManage.Controls.Add($panel)
 $formManage.AcceptButton = $btnSaveManage
 
 if ($formManage.ShowDialog() -eq "OK") {
-    $NewItems = @() 
+    $FinalItems = @() 
     foreach ($row in $dt.Rows) {
+        # 🔥 如果打勾了徹底刪除，就直接跳過這筆資料！它會被永遠抹除！
+        if ($row["徹底刪除"] -eq $true) {
+            continue
+        }
+
         $finalDesc = $row["商品描述"].ToString()
         if ($row["售出"]) { $finalDesc = "[售出] " + $finalDesc }
         
-        $NewItems += [PSCustomObject]@{
+        $FinalItems += [PSCustomObject]@{
             name       = $row["商品名稱"].ToString().Trim()
             price      = $row["原價"].ToString()
             sale_price = $row["特價"].ToString()
@@ -247,6 +265,7 @@ if ($formManage.ShowDialog() -eq "OK") {
             image      = $row["圖片路徑"].ToString()
         }
     }
+    $NewItems = $FinalItems # 用過濾後乾淨的資料覆蓋
 }
 $formManage.Dispose()
 
@@ -419,7 +438,7 @@ try {
     git add .
     git commit -m "Auto-update: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
     git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 完美發布！", 64, "大功告成")
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 完美發布！商品已被徹底刪除！", 64, "大功告成")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 網頁已生成，但 GitHub 上傳失敗！", 48, "上傳警告")
 }
