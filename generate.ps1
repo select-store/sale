@@ -177,9 +177,9 @@ foreach ($Item in $ExistingItems) {
     }
 }
 
-# ⭐️ 終極管理中心 (加入「徹底刪除」功能)
+# ⭐️ 終極管理中心 (含徹底刪除)
 $dt = New-Object System.Data.DataTable
-$dt.Columns.Add("徹底刪除", [bool]) | Out-Null  # 🔥 殺無赦按鈕
+$dt.Columns.Add("徹底刪除", [bool]) | Out-Null
 $dt.Columns.Add("售出", [bool]) | Out-Null
 $dt.Columns.Add("商品名稱", [string]) | Out-Null
 $dt.Columns.Add("原價", [string]) | Out-Null
@@ -190,7 +190,7 @@ $dt.Columns.Add("圖片路徑", [string]) | Out-Null
 
 foreach ($Item in $NewItems) {
     $row = $dt.NewRow()
-    $row["徹底刪除"] = $false # 預設當然是不刪除
+    $row["徹底刪除"] = $false
     $row["售出"] = ($Item.desc -match "\[售出\]")
     $row["商品名稱"] = $Item.name
     $row["原價"] = $Item.price
@@ -217,8 +217,6 @@ $formManage.Controls.Add($grid)
 
 $formManage.add_Shown({
     $grid.Columns["圖片路徑"].Visible = $false
-    
-    # 調整欄位寬度
     $grid.Columns["徹底刪除"].FillWeight = 35
     $grid.Columns["售出"].FillWeight = 25
     $grid.Columns["商品名稱"].FillWeight = 80
@@ -226,8 +224,6 @@ $formManage.add_Shown({
     $grid.Columns["特價"].FillWeight = 30
     $grid.Columns["商品描述"].FillWeight = 120
     $grid.Columns["參考網址"].FillWeight = 50
-    
-    # 把刪除那欄弄成紅色警告感覺
     $grid.Columns["徹底刪除"].DefaultCellStyle.BackColor = [System.Drawing.Color]::MistyRose
 })
 
@@ -248,10 +244,7 @@ $formManage.AcceptButton = $btnSaveManage
 if ($formManage.ShowDialog() -eq "OK") {
     $FinalItems = @() 
     foreach ($row in $dt.Rows) {
-        # 🔥 如果打勾了徹底刪除，就直接跳過這筆資料！它會被永遠抹除！
-        if ($row["徹底刪除"] -eq $true) {
-            continue
-        }
+        if ($row["徹底刪除"] -eq $true) { continue }
 
         $finalDesc = $row["商品描述"].ToString()
         if ($row["售出"]) { $finalDesc = "[售出] " + $finalDesc }
@@ -265,7 +258,7 @@ if ($formManage.ShowDialog() -eq "OK") {
             image      = $row["圖片路徑"].ToString()
         }
     }
-    $NewItems = $FinalItems # 用過濾後乾淨的資料覆蓋
+    $NewItems = $FinalItems 
 }
 $formManage.Dispose()
 
@@ -330,6 +323,10 @@ $HtmlStart = @"
         #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 999; justify-content: center; align-items: center; flex-direction: column; }
         #lightbox img { max-width: 95%; max-height: 90vh; object-fit: contain; }
         #loading-text { color: white; font-weight: bold; margin-bottom: 20px; font-size: 1.2rem; display: none; }
+        
+        /* 🔥 新增：Toast 底部浮動提示的樣式 */
+        #toast { visibility: hidden; min-width: 250px; background-color: rgba(30, 30, 30, 0.95); color: #fff; text-align: center; border-radius: 8px; padding: 14px 24px; position: fixed; z-index: 1000; left: 50%; bottom: 90px; font-size: 1.1rem; transform: translateX(-50%); box-shadow: 0 4px 12px rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.3s; font-weight: bold; border: 1px solid #555; pointer-events: none; }
+        #toast.show { visibility: visible; opacity: 1; }
     </style>
 </head><body>
     <div class="search-container"><input type="text" id="searchInput" placeholder="🔍 搜尋商品或描述..."></div>
@@ -388,7 +385,8 @@ foreach ($Item in $NewItems) {
         $ThumbHtml += "</div>"
     }
 
-    $BtnAction = if ($IsSold) { "alert('🚫 賣完囉！下次請早！')" } else { "copyInfo('$($Item.name)', '$FinalPrice', this)" }
+    # 🔥 這裡把原本的 alert() 換成了 showToast() 函式！
+    $BtnAction = if ($IsSold) { "showToast('🚫 賣完囉！下次請早！')" } else { "copyInfo('$($Item.name)', '$FinalPrice', this)" }
     $BtnText = if ($IsSold) { "🚫 已售出" } else { "📋 複製購買資訊" }
 
     $CardsHtml += @"
@@ -413,7 +411,18 @@ $HtmlEnd = @"
         <div id="loading-text">🔄 正在連線下載高清原圖...</div>
         <img id="box-img">
     </div>
+    
+    <div id="toast"></div>
+
     <script>
+        // 🔥 新增：負責控制 Toast 滑出與消失的 JS
+        function showToast(msg) {
+            let t = document.getElementById('toast');
+            t.innerText = msg;
+            t.classList.add('show');
+            setTimeout(() => { t.classList.remove('show'); }, 2000);
+        }
+
         function changeImg(t){ let m = t.closest('.card').querySelector('.main-img'); m.src=t.src; m.setAttribute('data-highres', t.getAttribute('data-highres')); }
         function openBox(img){ 
             let box = document.getElementById('lightbox'); let bImg = document.getElementById('box-img'); let loader = document.getElementById('loading-text'); let hr = img.getAttribute('data-highres');
@@ -438,7 +447,7 @@ try {
     git add .
     git commit -m "Auto-update: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
     git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 完美發布！商品已被徹底刪除！", 64, "大功告成")
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 完美發布！售出提示框已經升級為底部自動消失版本！", 64, "大功告成")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 網頁已生成，但 GitHub 上傳失敗！", 48, "上傳警告")
 }
