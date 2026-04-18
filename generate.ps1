@@ -16,7 +16,6 @@ $ShopDesc  = "全新與二手好物特賣，點擊進來挖寶！"
 $SiteUrl   = "https://select-store.github.io/sale/" 
 # =========================================
 
-# 🚨 解除檔案鎖定防護
 if (Test-Path $CsvPath) {
     try { Set-ItemProperty -Path $CsvPath -Name IsReadOnly -Value $false -ErrorAction SilentlyContinue } catch {}
 }
@@ -159,7 +158,7 @@ foreach ($Key in $GroupedProducts.Keys) {
     }
 }
 
-# 🚀 5. 絕對防護機制：無條件保留所有舊資料，就算照片不見也絕對不刪除！
+# 🚀 絕對防護：無條件保留所有舊資料，絕不刪除！
 foreach ($Item in $ExistingItems) {
     if (-not $ProcessedNames.ContainsKey($Item.name)) {
         $NewItems += $Item
@@ -351,7 +350,7 @@ try {
     git add .
     git commit -m "Auto-update: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
     git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 安全復原版已發布！你的舊資料絕對不會再被自動刪除了！", 64, "大功告成")
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 完美發布！資料已全數保住，網頁已更新！", 64, "大功告成")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 網頁已生成，但 GitHub 上傳失敗！", 48, "上傳警告")
 }
