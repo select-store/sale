@@ -200,7 +200,7 @@ $formManage.Dispose()
 
 $NewItems | Select-Object -Unique name, price, sale_price, desc, url, image | Export-Csv -Path $CsvPath -Encoding UTF8 -NoTypeInformation -Force
 
-# ================= 網頁生成 =================
+# ================= 網頁生成 (MVC 架構 + 精緻排版修復) =================
 $CacheBuster = (Get-Date).ToString("yyyyMMddHHmmss")
 function Optimize-ImageToBase64 {
     param([string]$Path)
@@ -246,7 +246,7 @@ foreach ($Item in $NewItems) {
 }
 $JsonString = $WebData | ConvertTo-Json -Depth 5 -Compress
 
-# 🔥 單引號保護的純淨 HTML/JS 模板 (強迫症治癒版)
+# 🔥 單引號保護的純淨 HTML/JS 模板
 $HtmlTemplate = @'
 <!DOCTYPE html>
 <html lang="zh-TW"><head>
@@ -283,7 +283,8 @@ $HtmlTemplate = @'
         @media (min-width: 850px) { .grid-container { grid-template-columns: repeat(4, 1fr); gap: 24px; } }
         @media (min-width: 1200px) { .grid-container { grid-template-columns: repeat(6, 1fr); gap: 28px; } }
         
-        .card { background: #1e293b; display: flex; flex-direction: column; border-radius: 18px; border: 1px solid #334155; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2); overflow: hidden; opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease, box-shadow 0.3s ease, border-color 0.3s ease; }
+        /* 卡片本體 */
+        .card { background: #1e293b; display: flex; flex-direction: column; border-radius: 18px; border: 1px solid #334155; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2); overflow: hidden; opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease, box-shadow 0.3s ease, border-color 0.3s ease; height: 100%; }
         .card.show { opacity: 1; transform: translateY(0); }
         .card.show:hover { box-shadow: 0 15px 30px rgba(0,0,0,0.4); border-color: #475569; transform: translateY(-4px); }
 
@@ -304,27 +305,28 @@ $HtmlTemplate = @'
         
         .info { flex-grow: 1; display: flex; flex-direction: column; }
         
-        /* 🔥 標題兩行鎖死，絕不忽高忽低 */
-        h3 { margin: 0 0 10px 0; font-size: 1.2rem; color: #f8fafc; font-weight: 600; line-height: 1.4; height: 2.8em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; }
+        /* 🔥 標題兩行鎖死對齊 */
+        h3 { margin: 0 0 10px 0; font-size: 1.15rem; color: #f8fafc; font-weight: 600; line-height: 1.4; height: 2.8em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; }
         
-        .price-container { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
-        .price { color: #ef4444; font-weight: 800; font-size: 1.4rem; }
-        .old-price { color: #64748b; text-decoration: line-through; font-size: 1rem; }
-        
-        /* 🔥 去油膩：拔除底色，換成純淨俐落亮紅色 */
-        .new-price { color: #ef4444; font-weight: 800; font-size: 1.5rem; }
+        /* 🔥 價格區塊修復：變小、防止換行 */
+        .price-container { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+        .price { color: #ef4444; font-weight: 700; font-size: 1.25rem; }
+        .old-price { color: #64748b; text-decoration: line-through; font-size: 0.9rem; }
+        .new-price { color: #ef4444; font-weight: 700; font-size: 1.2rem; background: rgba(239, 68, 68, 0.15); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.2); display: inline-flex; align-items: center; white-space: nowrap; }
         
         .desc { font-size: 0.95rem; color: #94a3b8; margin: 0 0 16px 0; line-height: 1.6; white-space: pre-line; }
         
-        /* 🔥 調整間距，讓底部的購物車按鈕可以吃到 margin-top: auto 沉到底 */
-        .ref-link { font-size: 0.85rem; color: #3b82f6; text-decoration: none; font-weight: 500; margin-top: 8px; margin-bottom: 16px; display: inline-block; padding-top: 12px; border-top: 1px dashed #334155; transition: color 0.2s; }
+        /* 🔥 卡片底部容器，強制貼底對齊 */
+        .card-footer { margin-top: auto; display: flex; flex-direction: column; width: 100%; }
+        .ref-link { font-size: 0.85rem; color: #3b82f6; text-decoration: none; font-weight: 500; margin-bottom: 14px; display: inline-block; padding-top: 12px; border-top: 1px dashed #334155; transition: color 0.2s; }
         .ref-link:hover { color: #60a5fa; }
         
-        /* 🔥 完美切齊底線 (margin-top: auto 把上方撐開) */
-        .btn-add { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 600; font-size: 1.05rem; width: 100%; margin-top: auto; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+        /* 🔥 按鈕重置 margin-top 讓 footer 接管 */
+        .btn-add { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; font-size: 1.05rem; width: 100%; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); margin-top: 0; }
         .btn-add.added { background: linear-gradient(135deg, #f59e0b, #ea580c); box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); }
         .btn-add.sold { background: #334155; color: #64748b; box-shadow: none; cursor: not-allowed; }
         
+        /* 滑動燈箱 */
         #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; opacity: 0; transition: opacity 0.3s ease; }
         #lightbox.visible { opacity: 1; }
         #lb-img-container { position: relative; width: 100%; height: 85vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
@@ -449,6 +451,7 @@ $HtmlTemplate = @'
                     ? `<button class="btn-add sold" onclick="showToast('🚫 賣完囉！下次請早！')">🚫 已售完</button>`
                     : `<button class="btn-add ${cart[item.name] ? 'added' : ''}" onclick="toggleCart('${item.name.replace(/'/g, "\\'")}', ${item.num_price}, this)">${cart[item.name] ? '✅ 已加入清單' : '➕ 加入購物車'}</button>`;
 
+                // 🔥 結構更新：加入 card-footer 確保網址與按鈕沉底對齊
                 card.innerHTML = `
                     <div class="main-img-container" onclick="openLightbox(${index}, 0)">
                         <div class="sold-badge">已售完</div>
@@ -460,9 +463,11 @@ $HtmlTemplate = @'
                             <h3 title="${item.name}">${item.name}</h3>
                             <div class="price-container">${priceHtml}</div>
                             <p class="desc">${item.desc}</p>
-                            ${urlHtml}
                         </div>
-                        ${btnHtml}
+                        <div class="card-footer">
+                            ${urlHtml}
+                            ${btnHtml}
+                        </div>
                     </div>
                 `;
                 grid.appendChild(card);
