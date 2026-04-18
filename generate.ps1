@@ -10,7 +10,6 @@ Add-Type -AssemblyName System.Data
 
 # ================= 設定區 =================
 $LineLink = "https://lin.ee/7NldLO6"
-# 🔥 已經幫你綁定專屬 LINE 官方帳號！電腦版結帳將直通對話框！
 $LineID   = "@917cytma" 
 
 $ImageFolder = Join-Path $ScriptDir "images"
@@ -247,13 +246,12 @@ foreach ($Item in $NewItems) {
 }
 $JsonString = $WebData | ConvertTo-Json -Depth 5 -Compress
 
-# 🔥 單引號保護的純淨 HTML/JS 模板
+# 🔥 單引號保護的純淨 HTML/JS 模板 (移除了 html2canvas)
 $HtmlTemplate = @'
 <!DOCTYPE html>
 <html lang="zh-TW"><head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{TITLE}}</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #eee; margin: 0; padding-bottom: 80px; }
         .top-nav { background: #1e1e1e; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #333; padding: 15px 10px; }
@@ -312,17 +310,6 @@ $HtmlTemplate = @'
             .bottom-btn { border-radius: 50px; padding: 15px 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: none; flex: none; width: auto; }
             .btn-cart { border-right: none; }
         }
-
-        /* 明細截圖區 */
-        #receipt-container { position: absolute; top: -9999px; left: -9999px; }
-        #receipt { width: 400px; background: #fff; color: #111; padding: 30px; font-family: sans-serif; box-sizing: border-box; border-top: 10px solid #e74c3c; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-        .receipt-title { text-align: center; font-size: 1.5rem; font-weight: bold; margin: 0 0 5px; color: #333; }
-        .receipt-date { text-align: center; color: #777; font-size: 0.9rem; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px dashed #ccc; }
-        .receipt-item { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 1.1rem; line-height: 1.4; border-bottom: 1px solid #eee; padding-bottom: 8px; }
-        .receipt-item span { flex: 1; padding-right: 10px; color: #333; }
-        .receipt-item strong { color: #111; }
-        .receipt-total { text-align: right; margin-top: 25px; font-size: 1.4rem; color: #e74c3c; font-weight: bold; border-top: 2px solid #e74c3c; padding-top: 15px; }
-        .receipt-footer { text-align: center; margin-top: 30px; font-size: 0.9rem; color: #888; }
     </style>
 </head><body>
     <div class="top-nav">
@@ -352,16 +339,6 @@ $HtmlTemplate = @'
     <div class="bottom-bar">
         <button id="cartBtn" class="bottom-btn btn-cart" onclick="checkout()">📝 結帳明細 (0件)</button>
         <a href="javascript:void(0)" onclick="openLine()" class="bottom-btn btn-line">💬 聯絡老闆 (LINE)</a>
-    </div>
-
-    <div id="receipt-container">
-        <div id="receipt">
-            <h2 class="receipt-title">{{TITLE}} - 購買明細</h2>
-            <div class="receipt-date" id="receiptDate"></div>
-            <div id="receiptItems"></div>
-            <div class="receipt-total">總金額: NT$ <span id="receiptTotal">0</span></div>
-            <div class="receipt-footer">請將此截圖傳送至 LINE 確認訂單</div>
-        </div>
     </div>
 
     <div id="lightbox" onclick="this.style.display='none'">
@@ -437,7 +414,6 @@ $HtmlTemplate = @'
             document.getElementById('cartBtn').innerText = '📝 結帳明細 (' + count + '件)';
         }
 
-        // 🔥 LINE 智慧跳轉判斷
         function openLine() {
             let isDesktop = !/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             let rawId = "{{LINE_ID}}".trim();
@@ -455,39 +431,23 @@ $HtmlTemplate = @'
             let items = Object.keys(cart);
             if (items.length === 0) { showToast('🛒 您的購物車是空的，請先挑選商品喔！'); return; }
 
-            let btn = document.getElementById('cartBtn');
-            let originalText = btn.innerText;
-            btn.innerText = '⏳ 正在產生明細圖片...';
-
-            document.getElementById('receiptDate').innerText = new Date().toLocaleString('zh-TW');
-            let rItems = document.getElementById('receiptItems');
-            rItems.innerHTML = '';
+            let text = "【我要購買以下商品】\n";
             let total = 0;
-            items.forEach((name, i) => {
-                let p = cart[name]; total += p;
-                rItems.innerHTML += `<div class="receipt-item"><span>${i+1}. ${name}</span><strong>NT$ ${p}</strong></div>`;
-            });
-            document.getElementById('receiptTotal').innerText = total;
+            for(let i=0; i<items.length; i++) {
+                let p = cart[items[i]];
+                text += (i+1) + ". " + items[i] + " - NT$ " + p + "\n";
+                total += parseInt(p);
+            }
+            text += "------------------\n總金額：NT$ " + total;
 
-            html2canvas(document.getElementById('receipt'), {scale: 2, backgroundColor: "#ffffff"}).then(canvas => {
-                btn.innerText = originalText;
-                canvas.toBlob(blob => {
-                    let file = new File([blob], "購買明細.png", {type: "image/png"});
-                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                        navigator.share({ files: [file], title: '購買明細' })
-                        .then(() => {
-                            if(confirm("✅ 明細已分享！\n需要跳轉至 LINE 聊天室聯絡老闆嗎？")) openLine();
-                        }).catch(console.error);
-                    } else {
-                        let link = document.createElement('a');
-                        link.download = '購買明細.png';
-                        link.href = canvas.toDataURL("image/png");
-                        link.click();
-                        if(confirm("✅ 【購買明細】圖片已自動下載！\n\n👉 按下「確定」：為您打開 LINE\n👉 進入 LINE 後，請點選「傳送照片」把剛下載的明細發給老闆喔！")) {
-                            openLine();
-                        }
-                    }
-                });
+            navigator.clipboard.writeText(text).then(() => {
+                let goLine = confirm("✅ 【購買清單與金額】已經自動複製好囉！\n\n👉 按下「確定」：為您打開 LINE\n👉 按下「取消」：留在本網頁繼續逛");
+                if (goLine) {
+                    alert("💡 貼心小提醒：\n\n跳轉到 LINE 之後，請記得在打字框【長按 ➜ 選擇貼上】，把購買明細傳給老闆才算完成喔！");
+                    openLine();
+                }
+            }).catch(err => {
+                alert("❌ 瀏覽器封鎖複製功能，請手動記下商品傳給老闆。");
             });
         }
 
@@ -530,8 +490,8 @@ $FinalHtml = $HtmlTemplate.Replace('{{JSON}}', $JsonString).Replace('{{TITLE}}',
 
 try {
     Write-Host "開始上傳至 GitHub..." -ForegroundColor Cyan
-    git add . ; git commit -m "UI Fix & Line update" ; git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 更新完成！", 64, "大功告成")
+    git add . ; git commit -m "Revert to Text Copy Checkout" ; git push origin main
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 更新完成！結帳已經改回純文字複製貼上了！", 64, "大功告成")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 上傳 GitHub 失敗！", 48, "警告")
 }
