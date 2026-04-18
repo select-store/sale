@@ -6,6 +6,7 @@ Set-Location -Path $ScriptDir
 Add-Type -AssemblyName Microsoft.VisualBasic
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Data
 
 # ================= 設定區 =================
 $LineLink = "https://lin.ee/7NldLO6"
@@ -178,22 +179,80 @@ foreach ($Item in $ExistingItems) {
     }
 }
 
-# ⭐️ 庫存盤點
-$formStock = New-Object System.Windows.Forms.Form
-$formStock.Text = "📦 庫存狀況調整 (打勾代表已售出)"; $formStock.Size = New-Object System.Drawing.Size(380, 500); $formStock.StartPosition = "CenterScreen"
-$clb = New-Object System.Windows.Forms.CheckedListBox; $clb.Location="15,20"; $clb.Size="330,360"; $clb.CheckOnClick=$true
-foreach ($Item in $NewItems) { [void]$clb.Items.Add($Item.name, ($Item.desc -match "\[售出\]")) }
-$formStock.Controls.Add($clb)
-$btnPub = New-Object System.Windows.Forms.Button; $btnPub.Text="🚀 儲存並發布"; $btnPub.Location="120,400"; $btnPub.Size="120,40"; $btnPub.BackColor="LightBlue"; $btnPub.DialogResult="OK"
-$formStock.Controls.Add($btnPub)
-if ($formStock.ShowDialog() -eq "OK") { 
-    for ($i=0; $i -lt $clb.Items.Count; $i++) {
-        $target = $NewItems | Where-Object { $_.name -eq $clb.Items[$i] }
-        if ($clb.GetItemChecked($i)) { if($target.desc -notmatch "\[售出\]"){$target.desc = "[售出] " + $target.desc} }
-        else { $target.desc = $target.desc -replace "\[售出\]\s*", "" }
+# ⭐️ 終極管理中心 (取代原本的庫存盤點)
+$dt = New-Object System.Data.DataTable
+$dt.Columns.Add("售出", [bool]) | Out-Null
+$dt.Columns.Add("商品名稱", [string]) | Out-Null
+$dt.Columns.Add("原價", [string]) | Out-Null
+$dt.Columns.Add("特價", [string]) | Out-Null
+$dt.Columns.Add("商品描述", [string]) | Out-Null
+$dt.Columns.Add("參考網址", [string]) | Out-Null
+$dt.Columns.Add("圖片路徑", [string]) | Out-Null
+
+foreach ($Item in $NewItems) {
+    $row = $dt.NewRow()
+    $row["售出"] = ($Item.desc -match "\[售出\]")
+    $row["商品名稱"] = $Item.name
+    $row["原價"] = $Item.price
+    $row["特價"] = $Item.sale_price
+    $row["商品描述"] = $Item.desc -replace "\[售出\]\s*", ""
+    $row["參考網址"] = $Item.url
+    $row["圖片路徑"] = $Item.image
+    $dt.Rows.Add($row)
+}
+
+$formManage = New-Object System.Windows.Forms.Form
+$formManage.Text = "📊 商品管理中心 (可以直接在格子裡修改價錢與介紹，打勾代表售出)"
+$formManage.Size = New-Object System.Drawing.Size(1000, 600)
+$formManage.StartPosition = "CenterScreen"
+$formManage.Font = New-Object System.Drawing.Font("微軟正黑體", 10)
+
+$grid = New-Object System.Windows.Forms.DataGridView
+$grid.DataSource = $dt
+$grid.Dock = "Fill"
+$grid.AutoSizeColumnsMode = "Fill"
+$grid.AllowUserToAddRows = $false
+$grid.RowHeadersVisible = $false
+$formManage.Controls.Add($grid)
+
+# 隱藏圖片路徑，並保護商品名稱不被誤改
+$formManage.add_Shown({
+    $grid.Columns["圖片路徑"].Visible = $false
+    $grid.Columns["商品名稱"].ReadOnly = $true
+    $grid.Columns["商品名稱"].DefaultCellStyle.BackColor = [System.Drawing.Color]::LightGray
+})
+
+$panel = New-Object System.Windows.Forms.Panel
+$panel.Dock = "Bottom"
+$panel.Height = 60
+
+$btnSaveManage = New-Object System.Windows.Forms.Button
+$btnSaveManage.Text = "💾 存檔並發布網頁"
+$btnSaveManage.Size = New-Object System.Drawing.Size(200, 40)
+$btnSaveManage.Location = New-Object System.Drawing.Point(390, 10)
+$btnSaveManage.BackColor = "LightBlue"
+$btnSaveManage.DialogResult = "OK"
+$panel.Controls.Add($btnSaveManage)
+$formManage.Controls.Add($panel)
+$formManage.AcceptButton = $btnSaveManage
+
+if ($formManage.ShowDialog() -eq "OK") {
+    $NewItems = @() # 清空陣列，準備接收修改後的新資料
+    foreach ($row in $dt.Rows) {
+        $finalDesc = $row["商品描述"].ToString()
+        if ($row["售出"]) { $finalDesc = "[售出] " + $finalDesc }
+        
+        $NewItems += [PSCustomObject]@{
+            name       = $row["商品名稱"].ToString()
+            price      = $row["原價"].ToString()
+            sale_price = $row["特價"].ToString()
+            desc       = $finalDesc
+            url        = $row["參考網址"].ToString()
+            image      = $row["圖片路徑"].ToString()
+        }
     }
 }
-$formStock.Dispose()
+$formManage.Dispose()
 
 try {
     $NewItems | Select-Object -Unique name, price, sale_price, desc, url, image | Export-Csv -Path $CsvPath -Encoding UTF8 -NoTypeInformation -Force -ErrorAction Stop
