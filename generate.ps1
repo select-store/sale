@@ -246,7 +246,7 @@ foreach ($Item in $NewItems) {
 }
 $JsonString = $WebData | ConvertTo-Json -Depth 5 -Compress
 
-# 🔥 純淨 HTML/JS 模板 (終極旗艦版 - 靜態高雅骨架屏)
+# 🔥 純淨 HTML/JS 模板 (終極神級藝術版)
 $HtmlTemplate = @'
 <!DOCTYPE html>
 <html lang="zh-TW"><head>
@@ -256,11 +256,13 @@ $HtmlTemplate = @'
     <style>
         body { font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif; background: #121212; color: #eee; margin: 0; padding-bottom: 80px; line-height: 1.5; scroll-behavior: smooth; }
         
+        /* 客製化捲軸 */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #121212; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #555; }
         
+        /* 毛玻璃導覽列 */
         .top-nav { background: rgba(26, 26, 26, 0.75); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 15px 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
         .search-box { width: 100%; max-width: 800px; margin: 0 auto 15px; display: block; padding: 12px 20px; border: 1px solid #444; border-radius: 25px; background: rgba(36, 36, 36, 0.9); color: #fff; box-sizing: border-box; font-size: 1rem; outline: none; transition: 0.3s; font-family: 'Noto Sans TC', sans-serif; }
         .search-box:focus { border-color: #3498db; background: #222; }
@@ -276,11 +278,15 @@ $HtmlTemplate = @'
 
         @media (max-width: 600px) { .filter-divider { display: none; } }
         
-        .grid-container { display: grid; grid-template-columns: 1fr; gap: 16px; padding: 20px 16px; max-width: 1400px; margin: 0 auto; min-height: 400px; }
+        /* 🔥 A. Spotlight 沉浸搜尋特效 */
+        .grid-container { display: grid; grid-template-columns: 1fr; gap: 16px; padding: 20px 16px; max-width: 1400px; margin: 0 auto; min-height: 400px; transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        body.search-focused .grid-container { filter: blur(5px) brightness(0.4); pointer-events: none; transform: scale(0.98); }
+        
         @media (min-width: 550px) { .grid-container { grid-template-columns: repeat(2, 1fr); gap: 20px; padding: 24px; } }
         @media (min-width: 850px) { .grid-container { grid-template-columns: repeat(3, 1fr); gap: 24px; } }
         @media (min-width: 1200px) { .grid-container { grid-template-columns: repeat(4, 1fr); gap: 28px; } }
         
+        /* 溫馨空狀態 */
         .empty-state { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 20px; text-align: center; color: #888; animation: cardEnter 0.5s ease both; }
         .empty-state-icon { font-size: 4rem; margin-bottom: 16px; opacity: 0.6; }
         .empty-state h2 { font-size: 1.5rem; color: #ddd; margin: 0 0 8px; }
@@ -288,11 +294,11 @@ $HtmlTemplate = @'
         .btn-reset { background: #3498db; color: #fff; border: none; padding: 12px 28px; border-radius: 24px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: 0.2s; box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3); font-family: 'Noto Sans TC', sans-serif; }
         .btn-reset:hover { background: #2980b9; transform: translateY(-2px); }
 
+        /* 蘋果風卡片邊緣光暈 + 絲滑進場 */
         .card { background: #1e1e24; display: flex; flex-direction: column; height: 100%; border-radius: 16px; border: 1px solid #2a2a2a; box-sizing: border-box; overflow: hidden; transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease; padding: 18px; animation: cardEnter 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; position: relative; }
         .card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.08); }
         @keyframes cardEnter { from { opacity: 0; transform: translateY(30px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
         
-        /* 🔥 A. 穩如泰山：移除閃爍動畫，改為高級靜態深灰底 */
         .img-wrapper { width: 100%; position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 12px; }
         .main-img-container { width: 85%; max-width: 260px; aspect-ratio: 1/1; position: relative; border-radius: 8px; cursor: zoom-in; background: #1a1a1a; }
         .main-img { width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity 0.4s ease-in-out; }
@@ -302,68 +308,14 @@ $HtmlTemplate = @'
         .badge-new { background: rgba(230, 126, 34, 0.15); color: #e67e22; border: 1px solid rgba(230, 126, 34, 0.4); }
         .badge-used { background: rgba(255, 255, 255, 0.08); color: #cccccc; border: 1px solid rgba(255, 255, 255, 0.2); }
 
-        /* 終極懸浮預覽：(Mac Dock 動態放大) + (發光圓角/明暗對比) + (智慧滑動) */
-        .thumb-overlay-container { 
-            position: absolute; 
-            bottom: 8px; 
-            left: 50%; 
-            transform: translateX(-50%); 
-            width: 85%; 
-            max-width: 220px;
-            display: flex;
-            justify-content: center;
-            z-index: 10;
-        }
-        
-        .thumb-scroll-area {
-            display: flex; 
-            gap: 6px; 
-            background: rgba(20, 20, 20, 0.65); 
-            backdrop-filter: blur(8px); 
-            -webkit-backdrop-filter: blur(8px); 
-            padding: 6px 12px; 
-            border-radius: 24px; 
-            align-items: center; 
-            border: 1px solid rgba(255, 255, 255, 0.15); 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-            overflow-x: auto;
-            scrollbar-width: none; 
-            -ms-overflow-style: none;  
-            scroll-behavior: smooth;
-        }
+        /* 終極懸浮預覽 */
+        .thumb-overlay-container { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 85%; max-width: 220px; display: flex; justify-content: center; z-index: 10; }
+        .thumb-scroll-area { display: flex; gap: 6px; background: rgba(20, 20, 20, 0.65); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 6px 12px; border-radius: 24px; align-items: center; border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.5); overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; scroll-behavior: smooth; }
         .thumb-scroll-area::-webkit-scrollbar { display: none; }
-        
-        .thumb-dot { 
-            flex-shrink: 0;
-            width: 26px; 
-            height: 26px; 
-            background-size: cover; 
-            background-position: center; 
-            border-radius: 50%; 
-            cursor: pointer; 
-            filter: brightness(0.6) saturate(0.7);
-            border: 2px solid transparent; 
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-            background-color: #111; 
-        }
-        
-        .thumb-dot:hover { 
-            transform: scale(1.3); 
-            filter: brightness(1) saturate(1);
-            z-index: 2;
-        }
-        
-        .thumb-dot.active { 
-            filter: brightness(1) saturate(1);
-            border-color: rgba(255, 255, 255, 0.9);
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
-            transform: scale(1.15);
-        }
-        .thumb-scroll-area:hover .thumb-dot.active:not(:hover) {
-            transform: scale(1);
-            box-shadow: none;
-            border-color: rgba(255, 255, 255, 0.4);
-        }
+        .thumb-dot { flex-shrink: 0; width: 26px; height: 26px; background-size: cover; background-position: center; border-radius: 50%; cursor: pointer; filter: brightness(0.6) saturate(0.7); border: 2px solid transparent; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); background-color: #111; }
+        .thumb-dot:hover { transform: scale(1.3); filter: brightness(1) saturate(1); z-index: 2; }
+        .thumb-dot.active { filter: brightness(1) saturate(1); border-color: rgba(255, 255, 255, 0.9); box-shadow: 0 0 10px rgba(255, 255, 255, 0.4); transform: scale(1.15); }
+        .thumb-scroll-area:hover .thumb-dot.active:not(:hover) { transform: scale(1); box-shadow: none; border-color: rgba(255, 255, 255, 0.4); }
         
         .sold-badge { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-10deg); background: rgba(231, 76, 60, 0.95); color: white; padding: 10px 24px; font-weight: 900; font-size: 1.2rem; border-radius: 8px; z-index: 15; border: 3px solid white; letter-spacing: 2px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
         .sold-out .sold-badge { display: block; }
@@ -382,14 +334,21 @@ $HtmlTemplate = @'
         .ref-link { font-size: 0.85rem; color: #3498db; text-decoration: none; font-weight: 600; margin-top: auto; display: inline-block; padding-top: 12px; border-top: 1px dashed #333; transition: 0.2s; }
         .ref-link:hover { color: #5dade2; }
         
+        /* 🔥 B. 購買按鈕「流光溢彩」特效 */
         .card-actions { margin-top: auto; }
-        .btn-add { font-family: 'Noto Sans TC', sans-serif; background: #3498db; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem; width: 100%; transition: background 0.2s, transform 0.1s; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .btn-add { font-family: 'Noto Sans TC', sans-serif; background: #3498db; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem; width: 100%; transition: background 0.2s, transform 0.1s; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 6px; position: relative; overflow: hidden; }
+        .btn-add::after { content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(to right, transparent, rgba(255,255,255,0.4), transparent); transform: skewX(-20deg); animation: shineSweep 3s infinite ease-in-out; }
+        @keyframes shineSweep { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
         .btn-add:hover { background: #2980b9; }
         .btn-add:active { transform: scale(0.98); }
         .btn-sold { background: #444 !important; color: #aaa !important; cursor: not-allowed !important; }
+        .btn-sold::after { display: none; } /* 售出拔除光影 */
         
-        #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; }
-        #lightbox img { max-width: 90%; max-height: 85vh; object-fit: contain; }
+        /* 🔥 C. 劇院級沉浸相簿背景 (模糊底圖) */
+        #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; overflow: hidden; }
+        #lb-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center; filter: blur(40px) brightness(0.4); z-index: -1; transform: scale(1.1); transition: background-image 0.4s ease-in-out; }
+        #lightbox img { max-width: 90%; max-height: 85vh; object-fit: contain; z-index: 1; box-shadow: 0 10px 40px rgba(0,0,0,0.6); border-radius: 8px; }
+        
         #lb-counter { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); color: white; font-size: 1rem; font-weight: bold; background: rgba(0,0,0,0.6); padding: 4px 16px; border-radius: 20px; z-index: 10001; letter-spacing: 1px; backdrop-filter: blur(4px); }
         .lb-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.1); color: white; border: none; font-size: 2rem; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; cursor: pointer; border-radius: 50%; z-index: 10001; transition: 0.3s; user-select: none; backdrop-filter: blur(4px); }
         .lb-nav:hover { background: rgba(255,255,255,0.3); }
@@ -398,6 +357,7 @@ $HtmlTemplate = @'
         #lb-close { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.1); width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: white; border: none; font-size: 1.5rem; cursor: pointer; z-index: 10001; transition: 0.3s; backdrop-filter: blur(4px); }
         #lb-close:hover { background: rgba(255,255,255,0.3); }
 
+        /* 動態島 Toast 通知 */
         #toast { visibility: hidden; min-width: auto; background: rgba(30, 30, 30, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: #fff; text-align: center; border-radius: 30px; padding: 12px 24px; position: fixed; z-index: 10000; left: 50%; bottom: 100px; font-size: 1rem; transform: translate(-50%, 20px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); font-weight: bold; border: 1px solid rgba(255,255,255,0.1); pointer-events: none; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
         #toast.show { visibility: visible; opacity: 1; transform: translate(-50%, 0); }
         
@@ -487,6 +447,7 @@ $HtmlTemplate = @'
     </div>
 
     <div id="lightbox" onclick="closeBox(event)">
+        <div id="lb-bg"></div>
         <div id="lb-counter" style="display:none;">1 / 3</div>
         <button id="lb-close" onclick="closeBox(event)">✕</button>
         <button id="lb-prev" class="lb-nav" onclick="lbNav(event, -1)" style="display:none;">❮</button>
@@ -505,6 +466,10 @@ $HtmlTemplate = @'
         let cardImgState = {};  
         let lbImages = [];
         let lbCurrentIdx = 0;
+        
+        // 🔥 A. Spotlight 沉浸搜尋事件綁定
+        document.getElementById('searchInput').addEventListener('focus', () => document.body.classList.add('search-focused'));
+        document.getElementById('searchInput').addEventListener('blur', () => document.body.classList.remove('search-focused'));
         
         window.addEventListener('scroll', () => {
             const btt = document.getElementById('btt-btn');
@@ -571,6 +536,7 @@ $HtmlTemplate = @'
                         </div>`;
                 }
 
+                // 🔥 B. 購買按鈕內建流光特效，已售出自動取消
                 let btnHtml = item.is_sold 
                     ? `<button class="btn-add btn-sold" onclick="showToast('此商品已售出，下次請早！', '🚫')">🚫 已售出</button>`
                     : `<button class="btn-add" onclick="toggleCart('${item.name.replace(/'/g, "\\'")}', ${item.num_price}, this)" style="background:${cart[item.name] ? '#e67e22' : '#3498db'}">${cart[item.name] ? '✅ 已加入購買清單' : '➕ 加入購買清單'}</button>`;
@@ -641,6 +607,7 @@ $HtmlTemplate = @'
             let bImg = document.getElementById('box-img');
             let loader = document.getElementById('loading-text');
             let counter = document.getElementById('lb-counter');
+            let lbBg = document.getElementById('lb-bg');
             
             bImg.style.display = 'none'; loader.style.display = 'block';
             
@@ -656,6 +623,9 @@ $HtmlTemplate = @'
             }
             
             let src = lbImages[lbCurrentIdx];
+            // 🔥 C. 更新劇院級背景 (極度模糊版)
+            lbBg.style.backgroundImage = `url('${src}')`;
+
             let tmp = new Image();
             tmp.onload = () => { bImg.src = src; loader.style.display = 'none'; bImg.style.display = 'block'; };
             tmp.onerror = () => { bImg.src = src; loader.style.display = 'none'; bImg.style.display = 'block'; };
@@ -668,7 +638,7 @@ $HtmlTemplate = @'
             updateLbImage();
         }
         window.closeBox = function(e) {
-            if(e.target.id === 'lightbox' || e.target.id === 'lb-close') {
+            if(e.target.id === 'lightbox' || e.target.id === 'lb-close' || e.target.id === 'lb-bg') {
                 document.getElementById('lightbox').style.display = 'none';
             }
         }
@@ -704,6 +674,22 @@ $HtmlTemplate = @'
             }
         }
 
+        // 🔥 D. 動態跳字計算特效 (Ease-out)
+        function animateCounter(id, endVal, duration) {
+            let obj = document.getElementById(id);
+            let startTime = null;
+            function step(currentTime) {
+                if (!startTime) startTime = currentTime;
+                let progress = Math.min((currentTime - startTime) / duration, 1);
+                // 使用 Cubic ease-out 讓數字越跑越慢，更有懸念感
+                let easeOut = 1 - Math.pow(1 - progress, 3); 
+                obj.innerText = Math.floor(easeOut * endVal).toLocaleString();
+                if (progress < 1) requestAnimationFrame(step);
+                else obj.innerText = endVal.toLocaleString();
+            }
+            requestAnimationFrame(step);
+        }
+
         window.openCheckoutModal = function() {
             let items = Object.keys(cart);
             if (items.length === 0) { showToast('🛒 您的購物車是空的，請先挑選喔！', '📦'); return; }
@@ -713,13 +699,15 @@ $HtmlTemplate = @'
             items.forEach((name, idx) => {
                 let p = parseInt(cart[name]);
                 total += p;
-                listHtml += `<div class="checkout-item"><span class="checkout-item-name">${idx+1}. ${name}</span><span class="checkout-item-price"><span class="currency">NT$</span>${p}</span></div>`;
+                listHtml += `<div class="checkout-item"><span class="checkout-item-name">${idx+1}. ${name}</span><span class="checkout-item-price"><span class="currency">NT$</span>${p.toLocaleString()}</span></div>`;
             });
             
             document.getElementById('checkout-list').innerHTML = listHtml;
-            document.getElementById('checkout-total').innerText = total;
             document.getElementById('checkout-modal').classList.add('show');
             document.body.style.overflow = 'hidden'; 
+            
+            // 🔥 觸發總金額動態跳字
+            animateCounter('checkout-total', total, 800);
         }
 
         window.closeCheckoutModal = function() {
@@ -775,6 +763,7 @@ $HtmlTemplate = @'
             });
         });
 
+        // 初始自動依照價格低到高排序
         renderGrid();
     </script>
 </body></html>
@@ -785,8 +774,8 @@ $FinalHtml = $HtmlTemplate.Replace('{{JSON}}', $JsonString).Replace('{{TITLE}}',
 
 try {
     Write-Host "開始上傳至 GitHub..." -ForegroundColor Cyan
-    git add . ; git commit -m "Clean UI: Replaced Shimmer with Static Dark Gray Background" ; git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 更新完成！極簡純淨的高級深灰底版已上線！", 64, "大功告成")
+    git add . ; git commit -m "God Tier UI: Spotlight, Button Shine, Cinematic Lightbox, Counter Anim" ; git push origin main
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 無懈可擊！4 大神級微互動已全數上線！", 64, "封神版發布")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 上傳 GitHub 失敗！", 48, "警告")
 }
