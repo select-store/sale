@@ -264,6 +264,7 @@ $HtmlTemplate = @'
         .filter-btn { background: #333; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; color: #ccc; font-size: 0.9rem; transition: 0.2s; }
         .filter-btn.active { background: #3498db; color: white; }
         
+        /* 🔥 排序按鈕樣式 */
         .sort-btn { background: #2c3e50; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; color: #ccc; font-size: 0.9rem; transition: 0.2s; }
         .sort-btn.active { background: #e67e22; color: white; font-weight: bold; }
 
@@ -277,7 +278,7 @@ $HtmlTemplate = @'
         .card { background: #1e1e1e; display: flex; flex-direction: column; height: 100%; padding: 16px; border-radius: 12px; border: 1px solid #333; box-sizing: border-box; }
         .main-img-container { width: 100%; aspect-ratio: 1/1; position: relative; overflow: hidden; background: #2c2c2c; border-radius: 8px; cursor: zoom-in; margin-bottom: 10px; }
         .main-img { width: 100%; height: 100%; object-fit: contain; }
-        .sold-badge { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); background: rgba(231, 76, 60, 0.95); color: white; padding: 8px 20px; font-weight: bold; border-radius: 6px; z-index: 10; border: 2px solid white; letter-spacing: 2px; }
+        .sold-badge { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); background: rgba(231, 76, 60, 0.95); color: white; padding: 8px 20px; font-weight: bold; border-radius: 6px; z-index: 10; border: 2px solid white; pointer-events: none; letter-spacing: 2px; }
         .sold-out .sold-badge { display: block; }
         .sold-out .main-img { filter: grayscale(100%); opacity: 0.4; }
         .thumb-container { display: flex; gap: 6px; padding: 4px 0; overflow-x: auto; }
@@ -327,9 +328,8 @@ $HtmlTemplate = @'
             <div class="filter-divider"></div>
             
             <div class="btn-group">
-                <button class="sort-btn active" data-sort="default">預設排序</button>
-                <button class="sort-btn" data-sort="asc">價格低 ⭡</button>
-                <button class="sort-btn" data-sort="desc">價格高 ⭣</button>
+                <button class="sort-btn active" data-sort="asc">價格由低到高</button>
+                <button class="sort-btn" data-sort="desc">價格由高到低</button>
             </div>
         </div>
     </div>
@@ -351,7 +351,7 @@ $HtmlTemplate = @'
         const RAW_DATA = {{JSON}};
         let cart = {};
         let activeFilters = new Set();
-        let activeSort = 'default';
+        let activeSort = 'asc'; // 🔥 預設就從最便宜排起
         
         function renderGrid() {
             const grid = document.getElementById('productGrid');
@@ -365,6 +365,7 @@ $HtmlTemplate = @'
                 return matchSearch && matchTag;
             });
             
+            // 排序邏輯
             if (activeSort === 'asc') filtered.sort((a,b) => a.num_price - b.num_price);
             if (activeSort === 'desc') filtered.sort((a,b) => b.num_price - a.num_price);
 
@@ -414,13 +415,10 @@ $HtmlTemplate = @'
             document.getElementById('cartBtn').innerText = '📝 結帳明細 (' + count + '件)';
         }
 
-        // 🔥 完美修復：官方帳號直通，不拔除 @
         function openLine() {
             let isDesktop = !/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             let rawId = "{{LINE_ID}}".trim();
-            
             if (isDesktop && rawId !== "") {
-                // 如果是官方帳號，直接使用完整的 @ ID
                 let lineUrl = rawId.startsWith('@') ? 'line://ti/p/' + rawId : 'line://ti/p/~' + rawId;
                 window.location.href = lineUrl;
             } else {
@@ -431,7 +429,6 @@ $HtmlTemplate = @'
         function checkout() {
             let items = Object.keys(cart);
             if (items.length === 0) { showToast('🛒 您的購物車是空的，請先挑選商品喔！'); return; }
-
             let text = "【我要購買以下商品】\n";
             let total = 0;
             for(let i=0; i<items.length; i++) {
@@ -440,7 +437,6 @@ $HtmlTemplate = @'
                 total += parseInt(p);
             }
             text += "------------------\n總金額：NT$ " + total;
-
             navigator.clipboard.writeText(text).then(() => {
                 let goLine = confirm("✅ 【購買清單與金額】已經自動複製好囉！\n\n👉 按下「確定」：為您打開 LINE\n👉 按下「取消」：留在本網頁繼續逛");
                 if (goLine) {
@@ -462,7 +458,6 @@ $HtmlTemplate = @'
         }
         
         document.getElementById('searchInput').addEventListener('input', renderGrid);
-        
         document.querySelectorAll('.filter-btn').forEach(btn => { 
             btn.addEventListener('click', function() { 
                 const tag = this.dataset.tag; 
@@ -471,7 +466,6 @@ $HtmlTemplate = @'
                 renderGrid(); 
             }); 
         });
-
         document.querySelectorAll('.sort-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
@@ -480,7 +474,6 @@ $HtmlTemplate = @'
                 renderGrid();
             });
         });
-
         renderGrid();
     </script>
 </body></html>
@@ -491,8 +484,8 @@ $FinalHtml = $HtmlTemplate.Replace('{{JSON}}', $JsonString).Replace('{{TITLE}}',
 
 try {
     Write-Host "開始上傳至 GitHub..." -ForegroundColor Cyan
-    git add . ; git commit -m "Fix Line Official Account Bug" ; git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 更新完成！LINE 官方帳號跳轉已完美修復！", 64, "大功告成")
+    git add . ; git commit -m "Update Sorting UI" ; git push origin main
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 更新完成！價格排序按鈕已改版！", 64, "大功告成")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 上傳 GitHub 失敗！", 48, "警告")
 }
