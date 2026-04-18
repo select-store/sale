@@ -16,6 +16,7 @@ $ShopDesc  = "全新與二手好物特賣，點擊進來挖寶！"
 $SiteUrl   = "https://select-store.github.io/sale/" 
 # =========================================
 
+# 🚨 解除檔案鎖定防護
 if (Test-Path $CsvPath) {
     try { Set-ItemProperty -Path $CsvPath -Name IsReadOnly -Value $false -ErrorAction SilentlyContinue } catch {}
 }
@@ -30,7 +31,7 @@ if (Test-Path $CsvPath) {
             if (-not [string]::IsNullOrWhiteSpace($Item.name) -and -not $ExistingMap.ContainsKey($Item.name)) {
                 $CleanPaths = @()
                 if ($Item.image) {
-                    foreach ($p in ($Item.image -split '\|')) {
+                    foreach ($p in @($Item.image -split '\|')) {
                         $fname = [System.IO.Path]::GetFileName($p)
                         if ($fname) { $CleanPaths += "images\$fname" }
                     }
@@ -50,7 +51,7 @@ if (Test-Path $CsvPath) {
 $DnaMap = @{}
 foreach ($Item in $ExistingItems) {
     if (-not [string]::IsNullOrWhiteSpace($Item.image)) {
-        foreach ($p in ($Item.image -split '\|')) {
+        foreach ($p in @($Item.image -split '\|')) {
             $fname = [System.IO.Path]::GetFileName($p).ToLower()
             if ($fname) { $DnaMap[$fname] = $Item }
         }
@@ -76,12 +77,12 @@ foreach ($Photo in $Photos) {
     $GroupedProducts[$ProductName] += "images\$($Photo.Name)"
 }
 
-# 4. 核心建檔邏輯
+# 4. 核心建檔邏輯 (修復單一圖片字串黏著 Bug)
 $NewItems = @()
 $ProcessedNames = @{} 
 
 foreach ($Key in $GroupedProducts.Keys) {
-    $GroupedImages = $GroupedProducts[$Key]
+    $GroupedImages = @($GroupedProducts[$Key])
     $GroupedFileNames = $GroupedImages | ForEach-Object { [System.IO.Path]::GetFileName($_).ToLower() }
     
     $MatchedItem = $null
@@ -92,9 +93,14 @@ foreach ($Key in $GroupedProducts.Keys) {
     
     if ($null -ne $MatchedItem) {
         if (-not $ProcessedNames.ContainsKey($MatchedItem.name)) {
-            $OldImages = if($MatchedItem.image) { $MatchedItem.image -split '\|' } else { @() }
-            $MergedImages = $OldImages + $GroupedImages | Select-Object -Unique
-            $MatchedItem.image = ($MergedImages -join "|")
+            # 🔥 強制轉換為陣列，防止字串黏合
+            $OldArray = @()
+            if ($MatchedItem.image) { $OldArray = @($MatchedItem.image -split '\|') }
+            $MergedArray = @()
+            $MergedArray += $OldArray
+            $MergedArray += $GroupedImages
+            
+            $MatchedItem.image = ($MergedArray | Select-Object -Unique | Where-Object { $_ -ne "" }) -join "|"
             $NewItems += $MatchedItem
             $ProcessedNames[$MatchedItem.name] = $true
         }
@@ -144,9 +150,15 @@ foreach ($Key in $GroupedProducts.Keys) {
             } else {
                 $selName = $lb.SelectedItem.ToString()
                 $targetItem = $ExistingMap[$selName]
-                $OldImages = if($targetItem.image) { $targetItem.image -split '\|' } else { @() }
-                $MergedImages = $OldImages + $GroupedImages | Select-Object -Unique
-                $targetItem.image = ($MergedImages -join "|")
+                
+                # 🔥 強制轉換為陣列，防止字串黏合
+                $OldArray = @()
+                if ($targetItem.image) { $OldArray = @($targetItem.image -split '\|') }
+                $MergedArray = @()
+                $MergedArray += $OldArray
+                $MergedArray += $GroupedImages
+                
+                $targetItem.image = ($MergedArray | Select-Object -Unique | Where-Object { $_ -ne "" }) -join "|"
                 
                 if (-not $ProcessedNames.ContainsKey($targetItem.name)) {
                     $NewItems += $targetItem
@@ -158,7 +170,7 @@ foreach ($Key in $GroupedProducts.Keys) {
     }
 }
 
-# 🚀 絕對防護：無條件保留所有舊資料，絕不刪除！
+# 🚀 絕對防護：保留舊資料
 foreach ($Item in $ExistingItems) {
     if (-not $ProcessedNames.ContainsKey($Item.name)) {
         $NewItems += $Item
@@ -272,12 +284,14 @@ foreach ($Item in $NewItems) {
     $HighResList = @()
     
     foreach ($p in $ImgPaths) {
-        $absPath = Join-Path $ScriptDir $p
-        $b = Optimize-ImageToBase64 -Path $absPath
-        if ($b) { 
-            $Base64List += $b
-            $Rel = $p -replace "\\", "/"
-            $HighResList += "$($SiteUrl)$($Rel)?v=$CacheBuster" 
+        if (-not [string]::IsNullOrWhiteSpace($p)) {
+            $absPath = Join-Path $ScriptDir $p
+            $b = Optimize-ImageToBase64 -Path $absPath
+            if ($b) { 
+                $Base64List += $b
+                $Rel = $p -replace "\\", "/"
+                $HighResList += "$($SiteUrl)$($Rel)?v=$CacheBuster" 
+            }
         }
     }
     
@@ -350,7 +364,7 @@ try {
     git add .
     git commit -m "Auto-update: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
     git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 完美發布！資料已全數保住，網頁已更新！", 64, "大功告成")
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 完美發布！", 64, "大功告成")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 網頁已生成，但 GitHub 上傳失敗！", 48, "上傳警告")
 }
