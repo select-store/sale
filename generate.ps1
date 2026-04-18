@@ -60,7 +60,7 @@ foreach ($Item in $ExistingItems) {
 
 $Photos = @(); $SeenFiles = @{}
 if (Test-Path $ImageFolder) { 
-    $Found = Get-ChildItem -Path $ImageFolder -Include *.jpg,jpeg,*.png,*.gif -Recurse
+    $Found = Get-ChildItem -Path $ImageFolder -Include *.jpg,*.jpeg,*.png,*.gif -Recurse
     foreach ($img in $Found) {
         $FileNameKey = $img.Name.ToLower()
         if (-not $SeenFiles.ContainsKey($FileNameKey)) { $SeenFiles[$FileNameKey] = $true; $Photos += $img }
@@ -279,16 +279,18 @@ $HtmlTemplate = @'
         @media (min-width: 1200px) { .grid-container { grid-template-columns: repeat(4, 1fr); gap: 28px; } }
         
         /* 卡片容器 */
-        .card { background: #1e1e24; display: flex; flex-direction: column; height: 100%; border-radius: 16px; border: 1px solid #2a2a2a; box-sizing: border-box; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; }
+        .card { background: #1e1e24; display: flex; flex-direction: column; height: 100%; border-radius: 16px; border: 1px solid #2a2a2a; box-sizing: border-box; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; padding: 18px; }
         .card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
         
-        /* 🔥 主圖縮小極致優化 */
-        .img-wrapper { width: 100%; background: #111; padding: 18px 0; position: relative; display: flex; justify-content: center; align-items: center; }
-        .main-img-container { width: 60%; max-width: 260px; /* 🔥 寬度大幅縮小至 60%，並限制最大尺寸 */ aspect-ratio: 1/1; position: relative; overflow: hidden; border-radius: 8px; cursor: zoom-in; }
+        /* 🔥 移除死黑背景，讓圖片容器自然融入卡片 */
+        .img-wrapper { width: 100%; position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 12px; }
+        
+        /* 🔥 圖片容器：不設黑邊框，適度縮小至 85%，最大 260px，居中顯示 */
+        .main-img-container { width: 85%; max-width: 260px; aspect-ratio: 1/1; position: relative; border-radius: 8px; cursor: zoom-in; }
         .main-img { width: 100%; height: 100%; object-fit: contain; transition: 0.3s; }
         
-        /* 精緻懸浮縮圖 */
-        .thumb-overlay { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); padding: 5px 10px; border-radius: 16px; z-index: 10; align-items: center; border: 1px solid rgba(255,255,255,0.1); }
+        /* 精緻懸浮縮圖 (位置緊貼容器底部) */
+        .thumb-overlay { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); padding: 5px 10px; border-radius: 16px; z-index: 10; align-items: center; border: 1px solid rgba(255,255,255,0.1); }
         .thumb-dot { width: 24px; height: 24px; background-size: cover; background-position: center; border-radius: 4px; border: 1px solid transparent; cursor: pointer; opacity: 0.6; transition: 0.3s; }
         .thumb-dot:hover, .thumb-dot.active { opacity: 1; border-color: rgba(255,255,255,0.8); transform: scale(1.05); }
         
@@ -298,7 +300,7 @@ $HtmlTemplate = @'
         .sold-out .main-img { filter: grayscale(100%); opacity: 0.4; }
         
         /* 文字資訊區 */
-        .info { flex-grow: 1; display: flex; flex-direction: column; padding: 16px; }
+        .info { flex-grow: 1; display: flex; flex-direction: column; padding: 0 0 16px 0; }
         h3 { margin: 0 0 10px 0; font-size: 1.05rem; color: #fff; line-height: 1.4; font-weight: 600; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; }
         
         .price-container { margin-bottom: 12px; display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; }
@@ -312,7 +314,7 @@ $HtmlTemplate = @'
         .ref-link:hover { color: #5dade2; }
         
         /* 按鈕區 */
-        .card-actions { padding: 0 16px 16px; margin-top: auto; }
+        .card-actions { margin-top: auto; }
         .btn-add { background: #3498db; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem; width: 100%; transition: background 0.2s, transform 0.1s; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 6px; }
         .btn-add:hover { background: #2980b9; }
         .btn-add:active { transform: scale(0.98); }
@@ -441,8 +443,8 @@ $HtmlTemplate = @'
                         <div class="main-img-container" onclick="openBox(${rawIdx})">
                             <div class="sold-badge">已售出</div>
                             <img class="main-img" id="main-img-${rawIdx}" src="${item.images[currentImgIdx]}">
+                            ${thumbHtml}
                         </div>
-                        ${thumbHtml}
                     </div>
                     <div class="info">
                         <h3>${item.name}</h3>
@@ -591,8 +593,8 @@ $FinalHtml = $HtmlTemplate.Replace('{{JSON}}', $JsonString).Replace('{{TITLE}}',
 
 try {
     Write-Host "開始上傳至 GitHub..." -ForegroundColor Cyan
-    git add . ; git commit -m "UI Polish: Shrink Main Image to 60%" ; git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 更新完成！主照片已經極致瘦身啦！", 64, "大功告成")
+    git add . ; git commit -m "Remove black background box from images" ; git push origin main
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 更新完成！惱人的死黑邊框已經被徹底拔除了！", 64, "大功告成")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 上傳 GitHub 失敗！", 48, "警告")
 }
