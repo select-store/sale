@@ -177,7 +177,7 @@ foreach ($Item in $ExistingItems) {
     }
 }
 
-# ⭐️ 終極管理中心 (含徹底刪除)
+# ⭐️ 終極管理中心
 $dt = New-Object System.Data.DataTable
 $dt.Columns.Add("徹底刪除", [bool]) | Out-Null
 $dt.Columns.Add("售出", [bool]) | Out-Null
@@ -290,7 +290,8 @@ $HtmlStart = @"
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>$ShopTitle</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #eee; margin: 0; padding-bottom: 80px; }
+        /* 🔥 加入 padding-bottom: 70px 確保最後一個商品不會被底部導覽列遮住 */
+        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #eee; margin: 0; padding-bottom: 70px; }
         .search-container { padding: 10px; background: #1e1e1e; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #333; }
         #searchInput { width: 100%; max-width: 800px; margin: 0 auto; display: block; padding: 14px 20px; border: 1px solid #444; border-radius: 25px; background: #222; color: #fff; box-sizing: border-box; font-size: 1rem; }
         .filter-container { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding: 15px 10px; }
@@ -317,28 +318,22 @@ $HtmlStart = @"
         .new-price { color: #e74c3c; font-weight: bold; font-size: 1.2rem; background: rgba(231, 76, 60, 0.15); padding: 2px 8px; border-radius: 4px; }
         .desc { font-size: 0.9rem; color: #aaa; margin: 0 0 12px 0; line-height: 1.5; }
         .ref-link { font-size: 0.85rem; color: #3498db; text-decoration: none; font-weight: bold; margin-top: auto; display: inline-block; padding-top: 8px; border-top: 1px dashed #444; }
-        .btn-copy { background: #3498db; color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem; width: 100%; margin-top: 16px; transition: background 0.2s; }
-        .btn-copy:hover { background: #2980b9; }
+        .btn-add { background: #3498db; color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem; width: 100%; margin-top: 16px; transition: background 0.2s; }
+        .btn-add:hover { background: #2980b9; }
         
-        #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 999; justify-content: center; align-items: center; flex-direction: column; }
+        #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; }
         #lightbox img { max-width: 95%; max-height: 90vh; object-fit: contain; }
         #loading-text { color: white; font-weight: bold; margin-bottom: 20px; font-size: 1.2rem; display: none; }
-        #toast { visibility: hidden; min-width: 250px; background-color: rgba(30, 30, 30, 0.95); color: #fff; text-align: center; border-radius: 8px; padding: 14px 24px; position: fixed; z-index: 1000; left: 50%; bottom: 90px; font-size: 1.1rem; transform: translateX(-50%); box-shadow: 0 4px 12px rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.3s; font-weight: bold; border: 1px solid #555; pointer-events: none; }
+        #toast { visibility: hidden; min-width: 250px; background-color: rgba(30, 30, 30, 0.95); color: #fff; text-align: center; border-radius: 8px; padding: 14px 24px; position: fixed; z-index: 10000; left: 50%; bottom: 90px; font-size: 1.1rem; transform: translateX(-50%); box-shadow: 0 4px 12px rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.3s; font-weight: bold; border: 1px solid #555; pointer-events: none; }
         #toast.show { visibility: visible; opacity: 1; }
-
-        /* 🔥 手機版底部導覽列樣式 (APP 級體驗) */
-        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; display: flex; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.5); }
-        .nav-btn { flex: 1; padding: 15px 0; border: none; font-weight: bold; font-size: 1rem; cursor: pointer; display: flex; justify-content: center; align-items: center; color: white; text-decoration: none; }
-        .nav-line { background: #06C755; }
-        .nav-cart { background: #e74c3c; display: none; } /* 預設隱藏，有選東西才出來 */
-        .nav-cart.active { display: flex; }
-
-        /* 🔥 電腦版樣式 (右下角圓角按鈕) */
-        @media (min-width: 768px) {
-            .bottom-nav { position: static; display: block; box-shadow: none; }
-            .nav-line { position: fixed; bottom: 30px; right: 30px; width: auto; padding: 15px 25px; border-radius: 50px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
-            .nav-cart { position: fixed; bottom: 90px; right: 30px; width: auto; padding: 15px 25px; border-radius: 50px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
-        }
+        
+        /* 🔥 APP 級別底部導覽列 */
+        .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; display: flex; z-index: 1000; box-shadow: 0 -4px 15px rgba(0,0,0,0.5); }
+        .bottom-btn { flex: 1; padding: 18px 0; text-align: center; font-size: 1.1rem; font-weight: bold; cursor: pointer; border: none; outline: none; text-decoration: none; }
+        .btn-cart { background: #e74c3c; color: white; transition: background 0.3s; border-right: 1px solid #c0392b; }
+        .btn-cart:hover { background: #c0392b; }
+        .btn-line { background: #06C755; color: white; transition: background 0.3s; display: flex; align-items: center; justify-content: center; }
+        .btn-line:hover { background: #05b04a; }
     </style>
 </head><body>
     <div class="search-container"><input type="text" id="searchInput" placeholder="🔍 搜尋商品或描述..."></div>
@@ -413,17 +408,17 @@ foreach ($Item in $NewItems) {
             <p class="desc">$($Item.desc)</p>
             $UrlHtml
         </div>
-        <button class="btn-copy" onclick="$BtnAction">$BtnText</button>
+        <button class="btn-add" onclick="$BtnAction">$BtnText</button>
     </div>
 "@
 }
 
 $HtmlEnd = @"
     </div>
-
-    <div class="bottom-nav">
-        <a href="$LineLink" class="nav-btn nav-line" target="_blank">💬 聯繫老闆 (LINE)</a>
-        <button id="cartBtn" class="nav-btn nav-cart" onclick="copyCart()">📝 複製清單 (0)</button>
+    
+    <div class="bottom-bar">
+        <button id="cartBtn" class="bottom-btn btn-cart" onclick="copyCart()">📝 結帳清單 (0件)</button>
+        <a href="$LineLink" class="bottom-btn btn-line" target="_blank">💬 聯絡老闆 (LINE)</a>
     </div>
 
     <div id="lightbox" onclick="this.style.display='none'">
@@ -444,32 +439,23 @@ $HtmlEnd = @"
             } else {
                 cart[name] = price;
                 btn.innerText = '✅ 已加入清單';
-                btn.style.background = '#e67e22'; 
+                btn.style.background = '#e67e22';
             }
             updateCartBtn();
         }
 
         function updateCartBtn() {
             let count = Object.keys(cart).length;
-            let cartBtn = document.getElementById('cartBtn');
-            if(count > 0) {
-                cartBtn.classList.add('active'); // 顯示按鈕
-                cartBtn.innerText = '📝 複製清單 (' + count + ')';
-                
-                // 在手機版時，如果購物車出現，調整 LINE 按鈕寬度，讓它們一人一半
-                if(window.innerWidth < 768) {
-                    document.querySelector('.nav-line').style.flex = "1";
-                    cartBtn.style.flex = "1";
-                }
-            } else {
-                cartBtn.classList.remove('active'); // 隱藏按鈕
-                if(window.innerWidth < 768) {
-                    document.querySelector('.nav-line').style.flex = "1"; // LINE 按鈕佔滿全部
-                }
-            }
+            document.getElementById('cartBtn').innerText = '📝 結帳清單 (' + count + '件)';
         }
 
         function copyCart() {
+            let count = Object.keys(cart).length;
+            if (count === 0) {
+                showToast('🛒 您的購物車是空的，請先挑選商品喔！');
+                return;
+            }
+
             let text = "【我要購買以下商品】\n";
             let total = 0;
             let items = Object.keys(cart);
@@ -480,14 +466,11 @@ $HtmlEnd = @"
             text += "------------------\n總金額：NT$ " + total;
 
             navigator.clipboard.writeText(text).then(() => {
-                let btn = document.getElementById('cartBtn');
-                let old = btn.innerText;
-                btn.innerText = '✅ 已複製！請貼給老闆';
-                btn.style.background = '#27ae60';
-                setTimeout(() => { 
-                    btn.innerText = old; 
-                    btn.style.background = '#e74c3c'; 
-                }, 2000);
+                // 🔥 自動跳轉超貼心設計
+                alert("✅ 已經幫您把【購買清單跟總金額】複製好了！\n\n按下「確定」後，會自動幫您打開 LINE，\n請直接在聊天框「貼上」傳給老闆就好囉！");
+                window.location.href = "$LineLink";
+            }).catch(err => {
+                alert("❌ 瀏覽器封鎖複製功能，請截圖傳給老闆。");
             });
         }
 
@@ -520,7 +503,7 @@ try {
     git add .
     git commit -m "Auto-update: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
     git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 完美發布！手機版底部導覽列已升級！", 64, "大功告成")
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 完美發布！防遮擋底部導覽與自動 LINE 跳轉已上線！", 64, "大功告成")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 網頁已生成，但 GitHub 上傳失敗！", 48, "上傳警告")
 }
