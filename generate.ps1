@@ -323,10 +323,12 @@ $HtmlStart = @"
         #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 999; justify-content: center; align-items: center; flex-direction: column; }
         #lightbox img { max-width: 95%; max-height: 90vh; object-fit: contain; }
         #loading-text { color: white; font-weight: bold; margin-bottom: 20px; font-size: 1.2rem; display: none; }
-        
-        /* 🔥 新增：Toast 底部浮動提示的樣式 */
         #toast { visibility: hidden; min-width: 250px; background-color: rgba(30, 30, 30, 0.95); color: #fff; text-align: center; border-radius: 8px; padding: 14px 24px; position: fixed; z-index: 1000; left: 50%; bottom: 90px; font-size: 1.1rem; transform: translateX(-50%); box-shadow: 0 4px 12px rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.3s; font-weight: bold; border: 1px solid #555; pointer-events: none; }
         #toast.show { visibility: visible; opacity: 1; }
+        
+        /* 🔥 購物車專用按鈕樣式 */
+        #cartBtn { display: none; position: fixed; bottom: 90px; right: 30px; background: #e74c3c; color: white; padding: 15px 25px; border-radius: 50px; border: none; font-weight: bold; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.5); cursor: pointer; font-size: 1rem; transition: background 0.3s; }
+        #cartBtn:hover { background: #c0392b; }
     </style>
 </head><body>
     <div class="search-container"><input type="text" id="searchInput" placeholder="🔍 搜尋商品或描述..."></div>
@@ -347,6 +349,11 @@ foreach ($Item in $NewItems) {
     $CardClass = if ($IsSold) { "card sold-out" } else { "card" }
     
     $FinalPrice = if ($Item.sale_price) { $Item.sale_price } else { $Item.price }
+    
+    # 確保 FinalPrice 是純數字，濾掉非數字字元 (防止計算總金額出錯)
+    $NumPrice = $FinalPrice -replace '[^\d]', ''
+    if ([string]::IsNullOrWhiteSpace($NumPrice)) { $NumPrice = "0" }
+
     $PriceHtml = if ($Item.sale_price) { "<div class=`"price-container`"><span class=`"old-price`">NT$ $($Item.price)</span><span class=`"new-price`">🔥 NT$ $($Item.sale_price)</span></div>" } else { "<div class=`"price-container`"><span class=`"price`">NT$ $($Item.price)</span></div>" }
     $UrlHtml = if ($Item.url) { "<a href=`"$($Item.url)`" target=`"_blank`" class=`"ref-link`">🔗 點此查看原廠參考網址</a>" } else { "" }
 
@@ -385,9 +392,9 @@ foreach ($Item in $NewItems) {
         $ThumbHtml += "</div>"
     }
 
-    # 🔥 這裡把原本的 alert() 換成了 showToast() 函式！
-    $BtnAction = if ($IsSold) { "showToast('🚫 賣完囉！下次請早！')" } else { "copyInfo('$($Item.name)', '$FinalPrice', this)" }
-    $BtnText = if ($IsSold) { "🚫 已售出" } else { "📋 複製購買資訊" }
+    # 🔥 改成加入購物車的事件
+    $BtnAction = if ($IsSold) { "showToast('🚫 賣完囉！下次請早！')" } else { "toggleCart('$($Item.name -replace "'","\'")', $NumPrice, this)" }
+    $BtnText = if ($IsSold) { "🚫 已售出" } else { "➕ 加入購買清單" }
 
     $CardsHtml += @"
     <div class="$CardClass" data-tags="$StatusTag $($Item.desc) $($Item.name)">
@@ -407,22 +414,71 @@ foreach ($Item in $NewItems) {
 $HtmlEnd = @"
     </div>
     <a href="$LineLink" class="floating-line" target="_blank">💬 聯繫我 (LINE)</a>
+    
+    <button id="cartBtn" onclick="copyCart()">📝 複製已選清單 (0件)</button>
+
     <div id="lightbox" onclick="this.style.display='none'">
         <div id="loading-text">🔄 正在連線下載高清原圖...</div>
         <img id="box-img">
     </div>
-    
     <div id="toast"></div>
 
     <script>
-        // 🔥 新增：負責控制 Toast 滑出與消失的 JS
-        function showToast(msg) {
-            let t = document.getElementById('toast');
-            t.innerText = msg;
-            t.classList.add('show');
-            setTimeout(() => { t.classList.remove('show'); }, 2000);
+        // 🔥 購物車核心邏輯
+        let cart = {};
+        
+        function toggleCart(name, price, btn) {
+            event.stopPropagation();
+            if (cart[name]) {
+                delete cart[name];
+                btn.innerText = '➕ 加入購買清單';
+                btn.style.background = '#3498db';
+            } else {
+                cart[name] = price;
+                btn.innerText = '✅ 已加入清單';
+                btn.style.background = '#e67e22'; // 橘色醒目
+            }
+            updateCartBtn();
         }
 
+        function updateCartBtn() {
+            let count = Object.keys(cart).length;
+            let cartBtn = document.getElementById('cartBtn');
+            if(count > 0) {
+                cartBtn.style.display = 'block';
+                cartBtn.innerText = '📝 複製已選清單 (' + count + '件)';
+            } else {
+                cartBtn.style.display = 'none';
+            }
+        }
+
+        function copyCart() {
+            let text = "【我要購買以下商品】\n";
+            let total = 0;
+            let items = Object.keys(cart);
+            for(let i=0; i<items.length; i++) {
+                text += (i+1) + ". " + items[i] + " - NT$ " + cart[items[i]] + "\n";
+                total += parseInt(cart[items[i]]);
+            }
+            text += "------------------\n總金額：NT$ " + total;
+
+            navigator.clipboard.writeText(text).then(() => {
+                let btn = document.getElementById('cartBtn');
+                let old = btn.innerText;
+                btn.innerText = '✅ 複製成功！請貼給老闆';
+                btn.style.background = '#27ae60';
+                setTimeout(() => { 
+                    btn.innerText = old; 
+                    btn.style.background = '#e74c3c'; 
+                }, 2000);
+            });
+        }
+
+        function showToast(msg) {
+            let t = document.getElementById('toast');
+            t.innerText = msg; t.classList.add('show');
+            setTimeout(() => { t.classList.remove('show'); }, 2000);
+        }
         function changeImg(t){ let m = t.closest('.card').querySelector('.main-img'); m.src=t.src; m.setAttribute('data-highres', t.getAttribute('data-highres')); }
         function openBox(img){ 
             let box = document.getElementById('lightbox'); let bImg = document.getElementById('box-img'); let loader = document.getElementById('loading-text'); let hr = img.getAttribute('data-highres');
@@ -430,7 +486,7 @@ $HtmlEnd = @"
             if(hr){ loader.style.display='block'; let tmp = new Image(); tmp.onload = () => { bImg.src=hr; loader.style.display='none'; bImg.style.display='block'; }; tmp.onerror = () => { bImg.src=img.src; loader.style.display='none'; bImg.style.display='block'; }; tmp.src=hr; } 
             else { bImg.src=img.src; bImg.style.display='block'; }
         }
-        function copyInfo(n, p, b){ event.stopPropagation(); navigator.clipboard.writeText('【我要購買】'+n+'\n金額：NT$ '+p).then(() => { let old = b.innerText; b.innerText = '✅ 已複製！'; b.style.background = '#27ae60'; setTimeout(() => { b.innerText = old; b.style.background = '#3498db'; }, 2000); }); }
+        
         let activeFilters = new Set();
         document.querySelectorAll('.filter-btn').forEach(btn => { btn.addEventListener('click', function() { const tag = this.dataset.tag; if (tag === 'all') { activeFilters.clear(); document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); this.classList.add('active'); } else { document.querySelector('[data-tag="all"]').classList.remove('active'); if (activeFilters.has(tag)) { activeFilters.delete(tag); this.classList.remove('active'); } else { activeFilters.add(tag); this.classList.add('active'); } } applyFilters(); }); });
         function applyFilters() { const search = document.getElementById('searchInput').value.toLowerCase(); document.querySelectorAll('.card').forEach(card => { const tags = card.dataset.tags.toLowerCase(); card.style.display = (tags.includes(search) && (activeFilters.size === 0 || Array.from(activeFilters).every(f => tags.includes(f.toLowerCase())))) ? 'flex' : 'none'; }); }
@@ -447,7 +503,7 @@ try {
     git add .
     git commit -m "Auto-update: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
     git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 完美發布！售出提示框已經升級為底部自動消失版本！", 64, "大功告成")
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 完美發布！購物車多選功能已上線！", 64, "大功告成")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 網頁已生成，但 GitHub 上傳失敗！", 48, "上傳警告")
 }
