@@ -282,17 +282,52 @@ $HtmlTemplate = @'
         .card { background: #1e1e24; display: flex; flex-direction: column; height: 100%; border-radius: 16px; border: 1px solid #2a2a2a; box-sizing: border-box; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; padding: 18px; }
         .card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
         
-        /* 🔥 移除死黑背景，讓圖片容器自然融入卡片 */
+        /* 主圖縮小與置中優化 */
         .img-wrapper { width: 100%; position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 12px; }
         
-        /* 🔥 圖片容器：不設黑邊框，適度縮小至 85%，最大 260px，居中顯示 */
+        /* 圖片容器 */
         .main-img-container { width: 85%; max-width: 260px; aspect-ratio: 1/1; position: relative; border-radius: 8px; cursor: zoom-in; }
-        .main-img { width: 100%; height: 100%; object-fit: contain; transition: 0.3s; }
+        .main-img { width: 100%; height: 100%; object-fit: contain; transition: opacity 0.3s ease-in-out; }
         
-        /* 精緻懸浮縮圖 (位置緊貼容器底部) */
-        .thumb-overlay { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); padding: 5px 10px; border-radius: 16px; z-index: 10; align-items: center; border: 1px solid rgba(255,255,255,0.1); }
-        .thumb-dot { width: 24px; height: 24px; background-size: cover; background-position: center; border-radius: 4px; border: 1px solid transparent; cursor: pointer; opacity: 0.6; transition: 0.3s; }
-        .thumb-dot:hover, .thumb-dot.active { opacity: 1; border-color: rgba(255,255,255,0.8); transform: scale(1.05); }
+        /* 🔥 精品級懸浮縮圖 (Hover Overlay) */
+        .thumb-overlay { 
+            position: absolute; 
+            bottom: 8px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            display: flex; 
+            gap: 8px; 
+            /* Apple 風格毛玻璃背景 */
+            background: rgba(20, 20, 20, 0.65); 
+            backdrop-filter: blur(8px); 
+            -webkit-backdrop-filter: blur(8px);
+            padding: 6px 12px; 
+            border-radius: 24px; 
+            z-index: 10; 
+            align-items: center; 
+            border: 1px solid rgba(255, 255, 255, 0.15); 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+        /* 微縮圖尺寸調校 */
+        .thumb-dot { 
+            width: 28px; 
+            height: 28px; 
+            background-size: cover; 
+            background-position: center; 
+            border-radius: 4px; 
+            border: 1px solid rgba(255,255,255,0.2); 
+            cursor: pointer; 
+            opacity: 0.5; 
+            transition: all 0.2s ease-in-out; 
+            background-color: #111;
+        }
+        /* 懸浮與啟用特效 */
+        .thumb-dot:hover, .thumb-dot.active { 
+            opacity: 1; 
+            border-color: #fff; 
+            transform: scale(1.15); 
+            box-shadow: 0 0 8px rgba(255,255,255,0.3);
+        }
         
         /* 售出的大印章 */
         .sold-badge { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-10deg); background: rgba(231, 76, 60, 0.95); color: white; padding: 10px 24px; font-weight: 900; font-size: 1.2rem; border-radius: 8px; z-index: 15; border: 3px solid white; letter-spacing: 2px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
@@ -427,6 +462,7 @@ $HtmlTemplate = @'
                     : `<span class="price">NT$ ${item.price}</span>`;
                 const urlHtml = item.url ? `<a href="${item.url}" target="_blank" class="ref-link">🔗 原廠參考網址</a>` : '';
                 
+                // 🔥 套用精品級懸浮縮圖
                 let thumbHtml = '';
                 if (item.images.length > 1) {
                     thumbHtml = `<div class="thumb-overlay" onclick="event.stopPropagation()">` + 
@@ -460,12 +496,22 @@ $HtmlTemplate = @'
             });
         }
 
+        // 🔥 切換主圖時加上淡入淡出效果
         window.setMainImg = function(e, rawIdx, imgIdx) {
             e.stopPropagation();
-            cardImgState[rawIdx] = imgIdx;
-            document.getElementById('main-img-' + rawIdx).src = RAW_DATA[rawIdx].images[imgIdx];
+            if(cardImgState[rawIdx] === imgIdx) return; // 點擊同一張不重整
             
-            let overlay = e.target.closest('.img-wrapper');
+            cardImgState[rawIdx] = imgIdx;
+            let imgEl = document.getElementById('main-img-' + rawIdx);
+            
+            // 簡單的淡入淡出過渡
+            imgEl.style.opacity = 0.5;
+            setTimeout(() => {
+                imgEl.src = RAW_DATA[rawIdx].images[imgIdx];
+                imgEl.style.opacity = 1;
+            }, 150);
+            
+            let overlay = e.target.closest('.thumb-overlay');
             if(overlay) {
                 overlay.querySelectorAll('.thumb-dot').forEach(d => d.classList.remove('active'));
                 e.target.classList.add('active');
@@ -593,8 +639,8 @@ $FinalHtml = $HtmlTemplate.Replace('{{JSON}}', $JsonString).Replace('{{TITLE}}',
 
 try {
     Write-Host "開始上傳至 GitHub..." -ForegroundColor Cyan
-    git add . ; git commit -m "Remove black background box from images" ; git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 更新完成！惱人的死黑邊框已經被徹底拔除了！", 64, "大功告成")
+    git add . ; git commit -m "Premium Hover Thumbnails Update" ; git push origin main
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 更新完成！精品級懸浮預覽已上線！", 64, "大功告成")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 上傳 GitHub 失敗！", 48, "警告")
 }
