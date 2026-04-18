@@ -200,7 +200,7 @@ $formManage.Dispose()
 
 $NewItems | Select-Object -Unique name, price, sale_price, desc, url, image | Export-Csv -Path $CsvPath -Encoding UTF8 -NoTypeInformation -Force
 
-# ================= 網頁生成 (MVC 架構 + UI/UX 升級) =================
+# ================= 網頁生成 (MVC 架構 + 精品視覺升級 + 保留原版 LINE 邏輯) =================
 $CacheBuster = (Get-Date).ToString("yyyyMMddHHmmss")
 function Optimize-ImageToBase64 {
     param([string]$Path)
@@ -246,105 +246,123 @@ foreach ($Item in $NewItems) {
 }
 $JsonString = $WebData | ConvertTo-Json -Depth 5 -Compress
 
-# 🔥 單引號保護的 HTML/JS 模板 (加入動畫、互動與滑動燈箱)
+# 🔥 單引號保護的純淨 HTML/JS 模板 (UI升級版)
 $HtmlTemplate = @'
 <!DOCTYPE html>
 <html lang="zh-TW"><head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{{TITLE}}</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #eee; margin: 0; padding-bottom: 80px; overflow-x: hidden; }
-        .top-nav { background: rgba(30, 30, 30, 0.95); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #333; padding: 15px 10px; transition: all 0.3s; }
-        .search-box { width: 100%; max-width: 800px; margin: 0 auto 15px; display: block; padding: 14px 20px; border: 1px solid #444; border-radius: 25px; background: #222; color: #fff; box-sizing: border-box; font-size: 1rem; transition: border-color 0.3s, box-shadow 0.3s; }
-        .search-box:focus { border-color: #3498db; box-shadow: 0 0 8px rgba(52, 152, 219, 0.5); outline: none; }
+        /* 🔥 全局深色曜石藍主題 */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding-bottom: 90px; overflow-x: hidden; }
         
-        .filter-container { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; max-width: 1000px; margin: 0 auto; }
+        .top-nav { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #1e293b; padding: 15px 10px; }
+        .search-box { width: 100%; max-width: 800px; margin: 0 auto 15px; display: block; padding: 14px 24px; border: 1px solid #334155; border-radius: 30px; background: #1e293b; color: #f8fafc; font-size: 1.05rem; transition: all 0.3s ease; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+        .search-box:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); outline: none; }
+        .search-box::placeholder { color: #64748b; }
+        
+        .filter-container { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; align-items: center; max-width: 1000px; margin: 0 auto; }
         .btn-group { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-        .filter-divider { width: 2px; height: 24px; background: #444; margin: 0 5px; border-radius: 2px; }
+        .filter-divider { width: 1px; height: 24px; background: #334155; margin: 0 5px; }
         
-        /* 🔥 按鈕微互動：加入 transform 縮放與過渡效果 */
-        .filter-btn, .sort-btn, .btn-add, .bottom-btn { transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
-        .filter-btn:active, .sort-btn:active, .btn-add:active { transform: scale(0.94); }
+        /* 微互動：點擊縮放 */
+        .filter-btn, .sort-btn, .btn-add, .bottom-btn { transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), all 0.3s ease; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+        .filter-btn:active, .sort-btn:active, .btn-add:active { transform: scale(0.95); }
         .bottom-btn:active { transform: scale(0.98); }
 
-        .filter-btn { background: #333; border: none; padding: 8px 16px; border-radius: 20px; color: #ccc; font-size: 0.9rem; }
-        .filter-btn.active { background: #3498db; color: white; box-shadow: 0 4px 10px rgba(52, 152, 219, 0.4); }
-        .sort-btn { background: #2c3e50; border: none; padding: 8px 16px; border-radius: 20px; color: #ccc; font-size: 0.9rem; }
-        .sort-btn.active { background: #e67e22; color: white; font-weight: bold; box-shadow: 0 4px 10px rgba(230, 126, 34, 0.4); }
+        .filter-btn { background: #1e293b; border: 1px solid #334155; padding: 8px 18px; border-radius: 20px; color: #94a3b8; font-size: 0.9rem; font-weight: 500; }
+        .filter-btn:hover { background: #334155; color: #fff; }
+        .filter-btn.active { background: #3b82f6; border-color: #3b82f6; color: white; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+        
+        .sort-btn { background: #1e293b; border: 1px solid #334155; padding: 8px 18px; border-radius: 20px; color: #94a3b8; font-size: 0.9rem; font-weight: 500; }
+        .sort-btn:hover { background: #334155; color: #fff; }
+        .sort-btn.active { background: linear-gradient(135deg, #f59e0b, #ea580c); border-color: transparent; color: white; font-weight: bold; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); }
 
         @media (max-width: 600px) { .filter-divider { display: none; } }
         
-        .grid-container { display: grid; grid-template-columns: 1fr; gap: 16px; padding: 16px; max-width: 1600px; margin: 0 auto; }
-        @media (min-width: 550px) { .grid-container { grid-template-columns: repeat(2, 1fr); gap: 16px; } }
-        @media (min-width: 850px) { .grid-container { grid-template-columns: repeat(4, 1fr); gap: 20px; } }
-        @media (min-width: 1200px) { .grid-container { grid-template-columns: repeat(6, 1fr); gap: 24px; } }
+        .grid-container { display: grid; grid-template-columns: 1fr; gap: 20px; padding: 20px; max-width: 1600px; margin: 0 auto; }
+        @media (min-width: 550px) { .grid-container { grid-template-columns: repeat(2, 1fr); gap: 20px; } }
+        @media (min-width: 850px) { .grid-container { grid-template-columns: repeat(4, 1fr); gap: 24px; } }
+        @media (min-width: 1200px) { .grid-container { grid-template-columns: repeat(6, 1fr); gap: 28px; } }
         
-        /* 🔥 滾動浮現動畫 (Scroll Reveal) */
-        .card { background: #1e1e1e; display: flex; flex-direction: column; height: 100%; padding: 16px; border-radius: 16px; border: 1px solid #333; box-sizing: border-box; opacity: 0; transform: translateY(30px); transition: opacity 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s; }
+        /* 🔥 精品化卡片設計 */
+        .card { background: #1e293b; display: flex; flex-direction: column; border-radius: 18px; border: 1px solid #334155; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2); overflow: hidden; opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease, box-shadow 0.3s ease, border-color 0.3s ease; }
         .card.show { opacity: 1; transform: translateY(0); }
-        .card.show:hover { box-shadow: 0 10px 25px rgba(0,0,0,0.4); border-color: #444; }
+        .card.show:hover { box-shadow: 0 15px 30px rgba(0,0,0,0.4); border-color: #475569; transform: translateY(-4px); }
 
-        .main-img-container { width: 100%; aspect-ratio: 1/1; position: relative; overflow: hidden; background: #2c2c2c; border-radius: 10px; cursor: zoom-in; margin-bottom: 10px; }
-        .main-img { width: 100%; height: 100%; object-fit: contain; transition: transform 0.3s; }
-        .card:hover .main-img { transform: scale(1.05); } /* 滑鼠移入微微放大 */
+        .main-img-container { width: 100%; aspect-ratio: 1/1; position: relative; overflow: hidden; background: #0f172a; cursor: zoom-in; }
+        .main-img { width: 100%; height: 100%; object-fit: contain; transition: transform 0.4s ease; }
+        .card:hover .main-img { transform: scale(1.05); } 
         
-        .sold-badge { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); background: rgba(231, 76, 60, 0.95); color: white; padding: 10px 25px; font-weight: bold; border-radius: 8px; z-index: 10; border: 2px solid white; letter-spacing: 2px; font-size: 1.2rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .sold-badge { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-10deg); background: rgba(220, 38, 38, 0.95); backdrop-filter: blur(4px); color: white; padding: 12px 30px; font-weight: 800; border-radius: 12px; z-index: 10; border: 2px solid rgba(255,255,255,0.2); letter-spacing: 3px; font-size: 1.3rem; box-shadow: 0 8px 20px rgba(0,0,0,0.4); text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
         .sold-out .sold-badge { display: block; }
-        .sold-out .main-img { filter: grayscale(100%); opacity: 0.4; transform: none !important; }
+        .sold-out .main-img { filter: grayscale(100%) opacity(0.5); transform: none !important; }
         
-        .thumb-container { display: flex; gap: 8px; padding: 6px 0; overflow-x: auto; scrollbar-width: none; }
+        .card-body { padding: 18px; display: flex; flex-direction: column; flex-grow: 1; }
+        
+        .thumb-container { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
         .thumb-container::-webkit-scrollbar { display: none; }
-        .thumb-img { width: 45px; height: 45px; object-fit: cover; border-radius: 8px; cursor: pointer; opacity: 0.5; border: 2px solid transparent; transition: all 0.2s; flex-shrink: 0; }
-        .thumb-img:hover, .thumb-img.active { opacity: 1; border-color: #3498db; transform: translateY(-2px); }
+        .thumb-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px; cursor: pointer; opacity: 0.5; border: 2px solid transparent; transition: all 0.2s ease; flex-shrink: 0; background: #0f172a; }
+        .thumb-img:hover, .thumb-img.active { opacity: 1; border-color: #3b82f6; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
         
-        .info { flex-grow: 1; display: flex; flex-direction: column; margin-top: 10px; }
-        h3 { margin: 0 0 8px 0; font-size: 1.15rem; color: #fff; line-height: 1.4; }
-        .price { color: #e74c3c; font-weight: bold; font-size: 1.3rem; }
-        .old-price { color: #777; text-decoration: line-through; font-size: 0.95rem; margin-right: 8px; }
-        .new-price { color: #e74c3c; font-weight: bold; font-size: 1.3rem; background: rgba(231, 76, 60, 0.15); padding: 4px 10px; border-radius: 6px; }
-        .desc { font-size: 0.95rem; color: #aaa; margin: 0 0 12px 0; line-height: 1.6; white-space: pre-line; }
-        .ref-link { font-size: 0.85rem; color: #3498db; text-decoration: none; font-weight: bold; margin-top: auto; display: inline-block; padding-top: 10px; border-top: 1px dashed #444; }
+        .info { flex-grow: 1; display: flex; flex-direction: column; }
+        h3 { margin: 0 0 10px 0; font-size: 1.2rem; color: #f8fafc; font-weight: 600; line-height: 1.4; }
         
-        .btn-add { background: #3498db; color: white; border: none; padding: 15px; border-radius: 10px; font-weight: bold; font-size: 1.05rem; width: 100%; margin-top: 16px; }
-        .btn-add:hover { background: #2980b9; }
+        .price-container { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+        .price { color: #ef4444; font-weight: 800; font-size: 1.4rem; }
+        .old-price { color: #64748b; text-decoration: line-through; font-size: 1rem; }
+        .new-price { color: #ef4444; font-weight: 800; font-size: 1.5rem; background: rgba(239, 68, 68, 0.15); padding: 4px 12px; border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.2); }
         
-        /* 🔥 專業滑動燈箱 (Lightbox) 樣式 */
-        #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; opacity: 0; transition: opacity 0.3s; }
+        .desc { font-size: 0.95rem; color: #94a3b8; margin: 0 0 16px 0; line-height: 1.6; white-space: pre-line; }
+        .ref-link { font-size: 0.85rem; color: #3b82f6; text-decoration: none; font-weight: 500; margin-top: auto; display: inline-block; padding-top: 12px; border-top: 1px dashed #334155; transition: color 0.2s; }
+        .ref-link:hover { color: #60a5fa; }
+        
+        /* 🔥 漸層按鈕 */
+        .btn-add { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 600; font-size: 1.05rem; width: 100%; margin-top: 16px; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+        .btn-add.added { background: linear-gradient(135deg, #f59e0b, #ea580c); box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); }
+        .btn-add.sold { background: #334155; color: #64748b; box-shadow: none; cursor: not-allowed; }
+        
+        /* 🔥 專業滑動燈箱 (加上箭頭) */
+        #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; opacity: 0; transition: opacity 0.3s ease; }
         #lightbox.visible { opacity: 1; }
-        #lb-img-container { position: relative; width: 100%; height: 80vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        #lb-img-container { position: relative; width: 100%; height: 85vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
         #box-img { max-width: 100%; max-height: 100%; object-fit: contain; transition: transform 0.2s ease-out; cursor: grab; }
         #box-img:active { cursor: grabbing; }
         
-        .lb-close { position: absolute; top: 20px; right: 20px; color: rgba(255,255,255,0.7); font-size: 2.5rem; cursor: pointer; z-index: 10001; line-height: 1; text-shadow: 0 2px 10px rgba(0,0,0,0.5); transition: color 0.2s; }
+        .lb-close { position: absolute; top: 20px; right: 20px; color: rgba(255,255,255,0.6); font-size: 2.5rem; cursor: pointer; z-index: 10001; line-height: 1; transition: color 0.2s; padding: 10px; }
         .lb-close:hover { color: white; }
         
-        .lb-nav { position: absolute; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.5); font-size: 3rem; cursor: pointer; user-select: none; padding: 20px; z-index: 10000; transition: color 0.2s, transform 0.2s; }
-        .lb-nav:hover { color: white; transform: translateY(-50%) scale(1.1); }
+        /* 🔥 完美的手機/電腦雙棲箭頭 */
+        .lb-nav { position: absolute; top: 50%; transform: translateY(-50%); color: white; font-size: 1.8rem; cursor: pointer; user-select: none; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; z-index: 10000; background: rgba(255,255,255,0.1); backdrop-filter: blur(4px); border-radius: 50%; transition: background 0.2s, transform 0.2s; }
+        .lb-nav:hover { background: rgba(255,255,255,0.25); }
         .lb-nav:active { transform: translateY(-50%) scale(0.9); }
-        #lb-prev { left: 10px; }
-        #lb-next { right: 10px; }
-        #lb-counter { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); color: white; font-size: 1.1rem; background: rgba(0,0,0,0.6); padding: 5px 15px; border-radius: 20px; letter-spacing: 2px; }
-        @media (max-width: 768px) { .lb-nav { display: none; /* 手機用滑的，隱藏箭頭 */ } }
+        #lb-prev { left: 15px; }
+        #lb-next { right: 15px; }
+        
+        #lb-counter { position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%); color: white; font-size: 1rem; background: rgba(255,255,255,0.15); backdrop-filter: blur(4px); padding: 6px 16px; border-radius: 20px; letter-spacing: 1px; font-weight: 500; }
 
-        #loading-text { color: white; font-weight: bold; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none; }
-        #toast { visibility: hidden; min-width: 250px; background-color: rgba(30, 30, 30, 0.98); color: #fff; text-align: center; border-radius: 12px; padding: 16px 24px; position: fixed; z-index: 10000; left: 50%; bottom: 100px; font-size: 1.1rem; transform: translateX(-50%) translateY(20px); box-shadow: 0 10px 30px rgba(0,0,0,0.6); opacity: 0; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); font-weight: bold; border: 1px solid #444; pointer-events: none; }
+        #loading-text { color: white; font-weight: 500; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none; background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 10px; }
+        
+        #toast { visibility: hidden; min-width: 250px; background-color: rgba(15, 23, 42, 0.95); backdrop-filter: blur(8px); color: #fff; text-align: center; border-radius: 12px; padding: 16px 24px; position: fixed; z-index: 10000; left: 50%; bottom: 100px; font-size: 1.05rem; transform: translateX(-50%) translateY(20px); box-shadow: 0 10px 25px rgba(0,0,0,0.5); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); font-weight: 600; border: 1px solid #334155; pointer-events: none; }
         #toast.show { visibility: visible; opacity: 1; transform: translateX(-50%) translateY(0); }
         
+        /* 底部導覽列 */
         .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; display: flex; z-index: 1000; box-shadow: 0 -10px 30px rgba(0,0,0,0.6); pointer-events: none; }
         .bottom-btn { pointer-events: auto; flex: 1; padding: 20px 0; text-align: center; font-size: 1.15rem; font-weight: bold; border: none; outline: none; text-decoration: none; }
-        .btn-cart { background: #e74c3c; color: white; border-right: 1px solid #c0392b; }
-        .btn-line { background: #06C755; color: white; display: flex; align-items: center; justify-content: center; }
+        .btn-cart { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border-right: 1px solid #b91c1c; }
+        .btn-line { background: linear-gradient(135deg, #10b981, #059669); color: white; display: flex; align-items: center; justify-content: center; }
         
         @media (min-width: 768px) {
             body { padding-bottom: 0; }
-            .bottom-bar { bottom: 30px; right: 30px; left: auto; width: auto; flex-direction: column; gap: 15px; box-shadow: none; }
-            .bottom-btn { border-radius: 50px; padding: 16px 28px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); flex: none; width: auto; }
+            .bottom-bar { bottom: 30px; right: 30px; left: auto; width: auto; flex-direction: column; gap: 16px; box-shadow: none; }
+            .bottom-btn { border-radius: 50px; padding: 16px 30px; box-shadow: 0 8px 25px rgba(0,0,0,0.4); flex: none; width: auto; font-size: 1.1rem; }
             .btn-cart { border-right: none; }
         }
     </style>
 </head><body>
     <div class="top-nav">
         <input type="text" id="searchInput" class="search-box" placeholder="🔍 搜尋商品或描述...">
+        
         <div class="filter-container">
             <div class="btn-group">
                 <button class="filter-btn active" data-tag="all">全部</button>
@@ -353,7 +371,9 @@ $HtmlTemplate = @'
                 <button class="filter-btn" data-tag="全新">#全新</button>
                 <button class="filter-btn" data-tag="二手">#二手</button>
             </div>
+            
             <div class="filter-divider"></div>
+            
             <div class="btn-group">
                 <button class="sort-btn active" data-sort="asc">價格由低到高</button>
                 <button class="sort-btn" data-sort="desc">價格由高到低</button>
@@ -429,22 +449,24 @@ $HtmlTemplate = @'
                 }
 
                 let btnHtml = item.is_sold 
-                    ? `<button class="btn-add" style="background:#555; cursor:not-allowed;" onclick="showToast('🚫 賣完囉！下次請早！')">🚫 已售出</button>`
-                    : `<button class="btn-add" onclick="toggleCart('${item.name.replace(/'/g, "\\'")}', ${item.num_price}, this)" style="background:${cart[item.name] ? '#e67e22' : '#3498db'}">${cart[item.name] ? '✅ 已加入結帳' : '➕ 加入購物車'}</button>`;
+                    ? `<button class="btn-add sold" onclick="showToast('🚫 賣完囉！下次請早！')">🚫 已售完</button>`
+                    : `<button class="btn-add ${cart[item.name] ? 'added' : ''}" onclick="toggleCart('${item.name.replace(/'/g, "\\'")}', ${item.num_price}, this)">${cart[item.name] ? '✅ 已加入清單' : '➕ 加入購物車'}</button>`;
 
                 card.innerHTML = `
                     <div class="main-img-container" onclick="openLightbox(${index}, 0)">
                         <div class="sold-badge">已售完</div>
                         <img class="main-img" id="main-img-${index}" src="${item.images[0]}">
                     </div>
-                    ${thumbHtml}
-                    <div class="info">
-                        <h3>${item.name}</h3>
-                        <div class="price-container">${priceHtml}</div>
-                        <p class="desc">${item.desc}</p>
-                        ${urlHtml}
+                    <div class="card-body">
+                        ${thumbHtml}
+                        <div class="info">
+                            <h3>${item.name}</h3>
+                            <div class="price-container">${priceHtml}</div>
+                            <p class="desc">${item.desc}</p>
+                            ${urlHtml}
+                        </div>
+                        ${btnHtml}
                     </div>
-                    ${btnHtml}
                 `;
                 grid.appendChild(card);
                 observer.observe(card); // 綁定浮現動畫
@@ -550,13 +572,16 @@ $HtmlTemplate = @'
             if(cart[name]) showToast('🛒 已加入購物車！');
         }
 
+        // 🔥 使用你確認沒問題的原版電腦版 LINE 跳轉邏輯 (不使用 /R/)
         function openLine() {
             let isDesktop = !/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             let rawId = "{{LINE_ID}}".trim();
             if (isDesktop && rawId !== "") {
                 let lineUrl = rawId.startsWith('@') ? 'line://ti/p/' + rawId : 'line://ti/p/~' + rawId;
                 window.location.href = lineUrl;
-            } else { window.location.href = '{{LINE_LINK}}'; }
+            } else {
+                window.location.href = '{{LINE_LINK}}';
+            }
         }
 
         function checkout() {
@@ -609,8 +634,8 @@ $FinalHtml = $HtmlTemplate.Replace('{{JSON}}', $JsonString).Replace('{{TITLE}}',
 
 try {
     Write-Host "開始上傳至 GitHub..." -ForegroundColor Cyan
-    git add . ; git commit -m "Ultimate UI/UX Upgrade" ; git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 更新完成！頂級滾動動畫與手勢操作已全數上線！", 64, "大功告成")
+    git add . ; git commit -m "Pure Text Checkout + Premium UI/UX + Mobile Arrows" ; git push origin main
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 完美發布！高級視覺體驗已套用，並保留原本的 LINE 結帳邏輯！", 64, "大功告成")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 上傳 GitHub 失敗！", 48, "警告")
 }
