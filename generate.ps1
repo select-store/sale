@@ -200,7 +200,7 @@ $formManage.Dispose()
 
 $NewItems | Select-Object -Unique name, price, sale_price, desc, url, image | Export-Csv -Path $CsvPath -Encoding UTF8 -NoTypeInformation -Force
 
-# ================= 網頁生成 (MVC 架構 + 精緻排版修復) =================
+# ================= 網頁生成 =================
 $CacheBuster = (Get-Date).ToString("yyyyMMddHHmmss")
 function Optimize-ImageToBase64 {
     param([string]$Path)
@@ -246,7 +246,7 @@ foreach ($Item in $NewItems) {
 }
 $JsonString = $WebData | ConvertTo-Json -Depth 5 -Compress
 
-# 🔥 單引號保護的純淨 HTML/JS 模板
+# 🔥 單引號保護的純淨 HTML/JS 模板 (懸浮膠囊縮圖版)
 $HtmlTemplate = @'
 <!DOCTYPE html>
 <html lang="zh-TW"><head>
@@ -283,32 +283,33 @@ $HtmlTemplate = @'
         @media (min-width: 850px) { .grid-container { grid-template-columns: repeat(4, 1fr); gap: 24px; } }
         @media (min-width: 1200px) { .grid-container { grid-template-columns: repeat(6, 1fr); gap: 28px; } }
         
-        /* 卡片本體 */
         .card { background: #1e293b; display: flex; flex-direction: column; border-radius: 18px; border: 1px solid #334155; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2); overflow: hidden; opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease, box-shadow 0.3s ease, border-color 0.3s ease; height: 100%; }
         .card.show { opacity: 1; transform: translateY(0); }
         .card.show:hover { box-shadow: 0 15px 30px rgba(0,0,0,0.4); border-color: #475569; transform: translateY(-4px); }
 
+        /* 🔥 主圖容器設定 relative 以包住懸浮膠囊 */
         .main-img-container { width: 100%; aspect-ratio: 1/1; position: relative; overflow: hidden; background: #0f172a; cursor: zoom-in; }
         .main-img { width: 100%; height: 100%; object-fit: contain; transition: transform 0.4s ease; }
         .card:hover .main-img { transform: scale(1.05); } 
         
-        .sold-badge { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-10deg); background: rgba(220, 38, 38, 0.95); backdrop-filter: blur(4px); color: white; padding: 12px 30px; font-weight: 800; border-radius: 12px; z-index: 10; border: 2px solid rgba(255,255,255,0.2); letter-spacing: 3px; font-size: 1.3rem; box-shadow: 0 8px 20px rgba(0,0,0,0.4); text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        /* 🔥 APP 風格：懸浮膠囊縮圖 */
+        .thumb-container { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; padding: 6px 14px; overflow-x: auto; scrollbar-width: none; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-radius: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); max-width: 85%; z-index: 5; }
+        .thumb-container::-webkit-scrollbar { display: none; }
+        .thumb-img { width: 32px; height: 32px; object-fit: cover; border-radius: 50%; cursor: pointer; opacity: 0.5; border: 2px solid transparent; transition: all 0.2s ease; flex-shrink: 0; background: #0f172a; }
+        .thumb-img:hover, .thumb-img.active { opacity: 1; border-color: #3b82f6; transform: scale(1.15); box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+
+        .sold-badge { display: none; position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-10deg); background: rgba(220, 38, 38, 0.95); backdrop-filter: blur(4px); color: white; padding: 12px 30px; font-weight: 800; border-radius: 12px; z-index: 10; border: 2px solid rgba(255,255,255,0.2); letter-spacing: 3px; font-size: 1.3rem; box-shadow: 0 8px 20px rgba(0,0,0,0.4); text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
         .sold-out .sold-badge { display: block; }
         .sold-out .main-img { filter: grayscale(100%) opacity(0.5); transform: none !important; }
         
         .card-body { padding: 18px; display: flex; flex-direction: column; flex-grow: 1; }
         
-        .thumb-container { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
-        .thumb-container::-webkit-scrollbar { display: none; }
-        .thumb-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px; cursor: pointer; opacity: 0.5; border: 2px solid transparent; transition: all 0.2s ease; flex-shrink: 0; background: #0f172a; }
-        .thumb-img:hover, .thumb-img.active { opacity: 1; border-color: #3b82f6; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
-        
         .info { flex-grow: 1; display: flex; flex-direction: column; }
         
-        /* 🔥 標題兩行鎖死對齊 */
+        /* 標題兩行鎖死對齊 */
         h3 { margin: 0 0 10px 0; font-size: 1.15rem; color: #f8fafc; font-weight: 600; line-height: 1.4; height: 2.8em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; }
         
-        /* 🔥 價格區塊修復：變小、防止換行 */
+        /* 價格區塊修復：變小、防止換行 */
         .price-container { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
         .price { color: #ef4444; font-weight: 700; font-size: 1.25rem; }
         .old-price { color: #64748b; text-decoration: line-through; font-size: 0.9rem; }
@@ -316,12 +317,11 @@ $HtmlTemplate = @'
         
         .desc { font-size: 0.95rem; color: #94a3b8; margin: 0 0 16px 0; line-height: 1.6; white-space: pre-line; }
         
-        /* 🔥 卡片底部容器，強制貼底對齊 */
+        /* 卡片底部容器，強制貼底對齊 */
         .card-footer { margin-top: auto; display: flex; flex-direction: column; width: 100%; }
         .ref-link { font-size: 0.85rem; color: #3b82f6; text-decoration: none; font-weight: 500; margin-bottom: 14px; display: inline-block; padding-top: 12px; border-top: 1px dashed #334155; transition: color 0.2s; }
         .ref-link:hover { color: #60a5fa; }
         
-        /* 🔥 按鈕重置 margin-top 讓 footer 接管 */
         .btn-add { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; font-size: 1.05rem; width: 100%; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); margin-top: 0; }
         .btn-add.added { background: linear-gradient(135deg, #f59e0b, #ea580c); box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); }
         .btn-add.sold { background: #334155; color: #64748b; box-shadow: none; cursor: not-allowed; }
@@ -442,7 +442,8 @@ $HtmlTemplate = @'
                 
                 let thumbHtml = '';
                 if (item.images.length > 1) {
-                    thumbHtml = `<div class="thumb-container">` + 
+                    // 🔥 縮圖防誤觸 onclick 阻斷，避免點擊縮圖時打開放大鏡
+                    thumbHtml = `<div class="thumb-container" onclick="event.stopPropagation()">` + 
                         item.images.map((img, i) => `<img src="${img}" class="thumb-img ${i===0?'active':''}" onmouseover="changeImg(this, ${index}, ${i})">`).join('') + 
                         `</div>`;
                 }
@@ -451,14 +452,14 @@ $HtmlTemplate = @'
                     ? `<button class="btn-add sold" onclick="showToast('🚫 賣完囉！下次請早！')">🚫 已售完</button>`
                     : `<button class="btn-add ${cart[item.name] ? 'added' : ''}" onclick="toggleCart('${item.name.replace(/'/g, "\\'")}', ${item.num_price}, this)">${cart[item.name] ? '✅ 已加入清單' : '➕ 加入購物車'}</button>`;
 
-                // 🔥 結構更新：加入 card-footer 確保網址與按鈕沉底對齊
+                // 🔥 結構更新：縮圖放進 main-img-container 裡面
                 card.innerHTML = `
                     <div class="main-img-container" onclick="openLightbox(${index}, 0)">
                         <div class="sold-badge">已售完</div>
                         <img class="main-img" id="main-img-${index}" src="${item.images[0]}">
+                        ${thumbHtml}
                     </div>
                     <div class="card-body">
-                        ${thumbHtml}
                         <div class="info">
                             <h3 title="${item.name}">${item.name}</h3>
                             <div class="price-container">${priceHtml}</div>
@@ -625,8 +626,8 @@ $FinalHtml = $HtmlTemplate.Replace('{{JSON}}', $JsonString).Replace('{{TITLE}}',
 
 try {
     Write-Host "開始上傳至 GitHub..." -ForegroundColor Cyan
-    git add . ; git commit -m "Alignment and Typography Clean Up" ; git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 強迫症治癒包已套用！卡片對齊、文字去油膩完美完成！", 64, "大功告成")
+    git add . ; git commit -m "Floating Thumbnails Update" ; git push origin main
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 完美發布！高級懸浮膠囊縮圖已上線，版面強迫症徹底治癒！", 64, "大功告成")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 上傳 GitHub 失敗！", 48, "警告")
 }
