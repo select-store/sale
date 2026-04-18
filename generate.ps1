@@ -246,74 +246,82 @@ foreach ($Item in $NewItems) {
 }
 $JsonString = $WebData | ConvertTo-Json -Depth 5 -Compress
 
-# 🔥 純淨 HTML/JS 模板 (UI瘦身升級版)
+# 🔥 單引號保護的純淨 HTML/JS 模板
 $HtmlTemplate = @'
 <!DOCTYPE html>
 <html lang="zh-TW"><head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{TITLE}}</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #eee; margin: 0; padding-bottom: 70px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #eee; margin: 0; padding-bottom: 80px; }
+        .top-nav { background: #1e1e1e; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #333; padding: 15px 10px; }
+        .search-box { width: 100%; max-width: 800px; margin: 0 auto 15px; display: block; padding: 14px 20px; border: 1px solid #444; border-radius: 25px; background: #222; color: #fff; box-sizing: border-box; font-size: 1rem; }
         
-        /* 🔥 上方搜尋與分類區 (優化手機版空間) */
-        .top-nav { background: #1e1e1e; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #333; padding: 12px 10px; }
-        .search-box { width: 100%; max-width: 800px; margin: 0 auto 10px; display: block; padding: 12px 20px; border: 1px solid #444; border-radius: 25px; background: #222; color: #fff; box-sizing: border-box; font-size: 1rem; }
+        .filter-container { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; max-width: 1000px; margin: 0 auto; }
+        .btn-group { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+        .filter-divider { width: 2px; height: 24px; background: #444; margin: 0 5px; border-radius: 2px; }
         
-        .filter-container { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 800px; margin: 0 auto; }
-        /* 讓按鈕區可以橫向滑動，不折行 */
-        .btn-group { display: flex; gap: 8px; width: 100%; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-        .btn-group::-webkit-scrollbar { display: none; }
-        
-        .filter-btn { white-space: nowrap; flex-shrink: 0; background: #333; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; color: #ccc; font-size: 0.9rem; transition: 0.2s; }
+        .filter-btn { background: #333; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; color: #ccc; font-size: 0.9rem; transition: 0.2s; }
         .filter-btn.active { background: #3498db; color: white; }
         
-        .sort-btn { white-space: nowrap; flex-shrink: 0; background: #2c3e50; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; color: #ccc; font-size: 0.9rem; transition: 0.2s; }
+        .sort-btn { background: #2c3e50; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; color: #ccc; font-size: 0.9rem; transition: 0.2s; }
         .sort-btn.active { background: #e67e22; color: white; font-weight: bold; }
 
-        /* 🔥 商品網格與卡片 (優化間距) */
-        .grid-container { display: grid; grid-template-columns: 1fr; gap: 12px; padding: 12px; max-width: 1600px; margin: 0 auto; }
-        @media (min-width: 550px) { .grid-container { grid-template-columns: repeat(2, 1fr); gap: 16px; padding: 16px; } }
+        @media (max-width: 600px) { .filter-divider { display: none; } }
+        
+        /* 🔥 商品網格與卡片 (優化間距與排版) */
+        .grid-container { display: grid; grid-template-columns: 1fr; gap: 16px; padding: 16px; max-width: 1600px; margin: 0 auto; }
+        @media (min-width: 550px) { .grid-container { grid-template-columns: repeat(2, 1fr); gap: 16px; } }
         @media (min-width: 850px) { .grid-container { grid-template-columns: repeat(4, 1fr); gap: 20px; } }
         @media (min-width: 1200px) { .grid-container { grid-template-columns: repeat(6, 1fr); gap: 24px; } }
         
-        .card { background: #1e1e1e; display: flex; flex-direction: column; height: 100%; padding: 14px; border-radius: 12px; border: 1px solid #333; box-sizing: border-box; }
-        .main-img-container { width: 100%; aspect-ratio: 1/1; position: relative; overflow: hidden; background: #2c2c2c; border-radius: 8px; cursor: zoom-in; margin-bottom: 10px; }
+        .card { background: #1e1e1e; display: flex; flex-direction: column; height: 100%; padding: 18px; border-radius: 12px; border: 1px solid #333; box-sizing: border-box; }
+        
+        /* 🔥 懸浮式縮圖設計 */
+        .main-img-container { width: 100%; aspect-ratio: 1/1; position: relative; overflow: hidden; background: #2c2c2c; border-radius: 8px; cursor: zoom-in; margin-bottom: 12px; }
         .main-img { width: 100%; height: 100%; object-fit: contain; }
-        .sold-badge { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); background: rgba(231, 76, 60, 0.95); color: white; padding: 8px 20px; font-weight: bold; border-radius: 6px; z-index: 10; border: 2px solid white; letter-spacing: 2px; }
+        .thumb-overlay { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; background: rgba(0,0,0,0.6); padding: 6px 12px; border-radius: 20px; z-index: 10; align-items: center; }
+        .thumb-dot { width: 36px; height: 36px; background-size: cover; background-position: center; border-radius: 6px; border: 2px solid transparent; cursor: pointer; opacity: 0.5; transition: 0.3s; }
+        .thumb-dot:hover, .thumb-dot.active { opacity: 1; border-color: #fff; }
+        
+        .sold-badge { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); background: rgba(231, 76, 60, 0.95); color: white; padding: 8px 20px; font-weight: bold; border-radius: 6px; z-index: 15; border: 2px solid white; letter-spacing: 2px; }
         .sold-out .sold-badge { display: block; }
         .sold-out .main-img { filter: grayscale(100%); opacity: 0.4; }
-        .thumb-container { display: flex; gap: 6px; padding: 4px 0; overflow-x: auto; }
-        .thumb-img { width: 42px; height: 42px; object-fit: cover; border-radius: 6px; cursor: pointer; opacity: 0.5; border: 2px solid transparent; }
-        .thumb-img:hover { opacity: 1; border-color: #3498db; }
-        .info { flex-grow: 1; display: flex; flex-direction: column; margin-top: 8px; }
-        h3 { margin: 0 0 6px 0; font-size: 1.05rem; color: #fff; line-height: 1.3; }
-        .price { color: #e74c3c; font-weight: bold; font-size: 1.15rem; }
-        .old-price { color: #777; text-decoration: line-through; font-size: 0.85rem; margin-right: 6px; }
-        .new-price { color: #e74c3c; font-weight: bold; font-size: 1.15rem; background: rgba(231, 76, 60, 0.15); padding: 2px 6px; border-radius: 4px; }
-        .desc { font-size: 0.9rem; color: #aaa; margin: 0 0 10px 0; line-height: 1.5; white-space: pre-line; }
-        .ref-link { font-size: 0.85rem; color: #3498db; text-decoration: none; font-weight: bold; margin-top: auto; display: inline-block; padding-top: 8px; border-top: 1px dashed #444; }
         
-        /* 🔥 加入按鈕瘦身 (避免折行) */
-        .btn-add { background: #3498db; color: white; border: none; padding: 12px 8px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.95rem; width: 100%; margin-top: 14px; transition: background 0.2s; letter-spacing: 0.5px; }
+        /* 🔥 提升字體質感 */
+        .info { flex-grow: 1; display: flex; flex-direction: column; margin-top: 5px; }
+        h3 { margin: 0 0 8px 0; font-size: 1.2rem; color: #fff; line-height: 1.4; font-weight: 600; }
+        .price-container { margin-bottom: 10px; }
+        .price { color: #e74c3c; font-weight: bold; font-size: 1.3rem; }
+        .old-price { color: #777; text-decoration: line-through; font-size: 0.95rem; margin-right: 8px; }
+        .new-price { color: #e74c3c; font-weight: bold; font-size: 1.3rem; background: rgba(231, 76, 60, 0.15); padding: 4px 8px; border-radius: 6px; }
+        .desc { font-size: 0.95rem; color: #bbb; margin: 0 0 14px 0; line-height: 1.6; white-space: pre-line; }
+        .ref-link { font-size: 0.9rem; color: #3498db; text-decoration: none; font-weight: bold; margin-top: auto; display: inline-block; padding-top: 10px; border-top: 1px dashed #444; }
+        .btn-add { background: #3498db; color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1.05rem; width: 100%; margin-top: 16px; transition: background 0.2s; }
         .btn-add:hover { background: #2980b9; }
         
-        #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; }
-        #lightbox img { max-width: 95%; max-height: 90vh; object-fit: contain; }
-        #toast { visibility: hidden; min-width: 200px; background-color: rgba(30, 30, 30, 0.95); color: #fff; text-align: center; border-radius: 8px; padding: 12px 20px; position: fixed; z-index: 10000; left: 50%; bottom: 80px; font-size: 1rem; transform: translateX(-50%); box-shadow: 0 4px 12px rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.3s; font-weight: bold; border: 1px solid #555; pointer-events: none; }
+        /* 🔥 Lightbox 左右箭頭設計 */
+        #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; }
+        #lightbox img { max-width: 90%; max-height: 85vh; object-fit: contain; }
+        .lb-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.6); color: white; border: none; font-size: 2rem; padding: 15px 20px; cursor: pointer; border-radius: 8px; z-index: 10001; transition: 0.3s; user-select: none; }
+        .lb-nav:hover { background: rgba(0,0,0,0.9); }
+        #lb-prev { left: 20px; }
+        #lb-next { right: 20px; }
+        #lb-close { position: absolute; top: 20px; right: 20px; background: none; color: white; border: none; font-size: 2.5rem; cursor: pointer; z-index: 10001; }
+
+        #toast { visibility: hidden; min-width: 250px; background-color: rgba(30, 30, 30, 0.95); color: #fff; text-align: center; border-radius: 8px; padding: 14px 24px; position: fixed; z-index: 10000; left: 50%; bottom: 90px; font-size: 1.1rem; transform: translateX(-50%); box-shadow: 0 4px 12px rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.3s; font-weight: bold; border: 1px solid #555; pointer-events: none; }
         #toast.show { visibility: visible; opacity: 1; }
         
-        /* 🔥 底部導覽列瘦身 */
+        /* 底部導覽列 */
         .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; display: flex; z-index: 1000; box-shadow: 0 -4px 15px rgba(0,0,0,0.5); pointer-events: none; }
-        .bottom-btn { pointer-events: auto; flex: 1; padding: 14px 0; text-align: center; font-size: 1rem; font-weight: bold; cursor: pointer; border: none; outline: none; text-decoration: none; }
+        .bottom-btn { pointer-events: auto; flex: 1; padding: 18px 0; text-align: center; font-size: 1.1rem; font-weight: bold; cursor: pointer; border: none; outline: none; text-decoration: none; }
         .btn-cart { background: #e74c3c; color: white; transition: background 0.3s; border-right: 1px solid #c0392b; }
         .btn-line { background: #06C755; color: white; transition: background 0.3s; display: flex; align-items: center; justify-content: center; }
         
-        /* 電腦版恢復懸浮 */
         @media (min-width: 768px) {
             body { padding-bottom: 0; }
-            .filter-container { flex-direction: row; } /* 電腦版恢復同行顯示 */
             .bottom-bar { bottom: 30px; right: 30px; left: auto; width: auto; flex-direction: column; gap: 15px; box-shadow: none; }
-            .bottom-btn { border-radius: 50px; padding: 14px 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: none; flex: none; width: auto; }
+            .bottom-btn { border-radius: 50px; padding: 15px 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: none; flex: none; width: auto; }
             .btn-cart { border-right: none; }
         }
     </style>
@@ -330,10 +338,11 @@ $HtmlTemplate = @'
                 <button class="filter-btn" data-tag="二手">#二手</button>
             </div>
             
+            <div class="filter-divider"></div>
+            
             <div class="btn-group">
-                <button class="sort-btn active" data-sort="default">預設排序</button>
-                <button class="sort-btn" data-sort="asc">價格低 ⭡</button>
-                <button class="sort-btn" data-sort="desc">價格高 ⭣</button>
+                <button class="sort-btn active" data-sort="asc">價格低到高 ⭡</button>
+                <button class="sort-btn" data-sort="desc">價格高到低 ⭣</button>
             </div>
         </div>
     </div>
@@ -345,24 +354,33 @@ $HtmlTemplate = @'
         <a href="javascript:void(0)" onclick="openLine()" class="bottom-btn btn-line">💬 聯絡老闆 (LINE)</a>
     </div>
 
-    <div id="lightbox" onclick="this.style.display='none'">
-        <div id="loading-text">🔄 正在連線下載高清原圖...</div>
+    <div id="lightbox" onclick="closeBox(event)">
+        <button id="lb-close" onclick="closeBox(event)">×</button>
+        <button id="lb-prev" class="lb-nav" onclick="lbNav(event, -1)" style="display:none;">❮</button>
+        <div id="loading-text" style="color:white;font-weight:bold;font-size:1.2rem;display:none;">🔄 載入中...</div>
         <img id="box-img">
+        <button id="lb-next" class="lb-nav" onclick="lbNav(event, 1)" style="display:none;">❯</button>
     </div>
+    
     <div id="toast"></div>
 
     <script>
         const RAW_DATA = {{JSON}};
         let cart = {};
         let activeFilters = new Set();
-        let activeSort = 'default';
+        let activeSort = 'asc'; // 預設使用低到高
+        let cardImgState = {};  // 紀錄每張卡片目前顯示第幾張圖
+        
+        // Lightbox 全局變數
+        let lbImages = [];
+        let lbCurrentIdx = 0;
         
         function renderGrid() {
             const grid = document.getElementById('productGrid');
             grid.innerHTML = '';
             
             const search = document.getElementById('searchInput').value.toLowerCase();
-            let filtered = RAW_DATA.filter(item => {
+            let filtered = [...RAW_DATA].filter(item => {
                 const tags = (item.is_sold ? "已售出" : "未售出") + " " + item.desc + " " + item.name;
                 const matchSearch = tags.toLowerCase().includes(search);
                 const matchTag = activeFilters.size === 0 || Array.from(activeFilters).every(f => tags.toLowerCase().includes(f.toLowerCase()));
@@ -373,6 +391,10 @@ $HtmlTemplate = @'
             if (activeSort === 'desc') filtered.sort((a,b) => b.num_price - a.num_price);
 
             filtered.forEach(item => {
+                const rawIdx = RAW_DATA.indexOf(item); // 鎖定絕對 ID
+                if(cardImgState[rawIdx] === undefined) cardImgState[rawIdx] = 0; // 初始化圖片狀態
+                let currentImgIdx = cardImgState[rawIdx];
+
                 const card = document.createElement('div');
                 card.className = item.is_sold ? 'card sold-out' : 'card';
                 
@@ -381,23 +403,24 @@ $HtmlTemplate = @'
                     : `<span class="price">NT$ ${item.price}</span>`;
                 const urlHtml = item.url ? `<a href="${item.url}" target="_blank" class="ref-link">🔗 原廠參考網址</a>` : '';
                 
+                // 🔥 懸浮方塊縮圖
                 let thumbHtml = '';
                 if (item.images.length > 1) {
-                    thumbHtml = `<div class="thumb-container">` + 
-                        item.images.map((img, i) => `<img src="${img}" data-highres="${item.highres[i]}" class="thumb-img" onclick="changeImg(this)">`).join('') + 
+                    thumbHtml = `<div class="thumb-overlay" onclick="event.stopPropagation()">` + 
+                        item.images.map((img, i) => `<div class="thumb-dot ${i === currentImgIdx ? 'active' : ''}" style="background-image:url('${img}')" onclick="setMainImg(event, ${rawIdx}, ${i})"></div>`).join('') + 
                         `</div>`;
                 }
 
                 let btnHtml = item.is_sold 
                     ? `<button class="btn-add" onclick="showToast('🚫 賣完囉！下次請早！')">🚫 已售出</button>`
-                    : `<button class="btn-add" onclick="toggleCart('${item.name.replace(/'/g, "\\'")}', ${item.num_price}, this)" style="background:${cart[item.name] ? '#e67e22' : '#3498db'}">${cart[item.name] ? '✅ 已加入' : '➕ 加入購物車'}</button>`;
+                    : `<button class="btn-add" onclick="toggleCart('${item.name.replace(/'/g, "\\'")}', ${item.num_price}, this)" style="background:${cart[item.name] ? '#e67e22' : '#3498db'}">${cart[item.name] ? '✅ 已加入購買清單' : '➕ 加入購買清單'}</button>`;
 
                 card.innerHTML = `
-                    <div class="main-img-container" onclick="openBox(this.querySelector('.main-img'))">
+                    <div class="main-img-container" onclick="openBox(${rawIdx})">
                         <div class="sold-badge">已售出</div>
-                        <img class="main-img" src="${item.images[0]}" data-highres="${item.highres[0]}">
+                        <img class="main-img" id="main-img-${rawIdx}" src="${item.images[currentImgIdx]}">
+                        ${thumbHtml}
                     </div>
-                    ${thumbHtml}
                     <div class="info">
                         <h3>${item.name}</h3>
                         <div class="price-container">${priceHtml}</div>
@@ -408,6 +431,53 @@ $HtmlTemplate = @'
                 `;
                 grid.appendChild(card);
             });
+        }
+
+        // 🔥 切換主圖 (點擊懸浮縮圖)
+        window.setMainImg = function(e, rawIdx, imgIdx) {
+            e.stopPropagation();
+            cardImgState[rawIdx] = imgIdx;
+            document.getElementById('main-img-' + rawIdx).src = RAW_DATA[rawIdx].images[imgIdx];
+            
+            let overlay = e.target.closest('.thumb-overlay');
+            overlay.querySelectorAll('.thumb-dot').forEach(d => d.classList.remove('active'));
+            e.target.classList.add('active');
+        }
+
+        // 🔥 打開相簿 (支援左右切換)
+        window.openBox = function(rawIdx) {
+            let item = RAW_DATA[rawIdx];
+            lbImages = item.images.map((b64, i) => item.highres[i] ? item.highres[i] : b64);
+            lbCurrentIdx = cardImgState[rawIdx];
+            
+            document.getElementById('lightbox').style.display = 'flex';
+            updateLbImage();
+        }
+        
+        function updateLbImage() {
+            let bImg = document.getElementById('box-img');
+            let loader = document.getElementById('loading-text');
+            bImg.style.display = 'none'; loader.style.display = 'block';
+            
+            let src = lbImages[lbCurrentIdx];
+            let tmp = new Image();
+            tmp.onload = () => { bImg.src = src; loader.style.display = 'none'; bImg.style.display = 'block'; };
+            tmp.onerror = () => { bImg.src = src; loader.style.display = 'none'; bImg.style.display = 'block'; };
+            tmp.src = src;
+            
+            document.getElementById('lb-prev').style.display = lbImages.length > 1 ? 'block' : 'none';
+            document.getElementById('lb-next').style.display = lbImages.length > 1 ? 'block' : 'none';
+        }
+
+        window.lbNav = function(e, step) {
+            e.stopPropagation();
+            lbCurrentIdx = (lbCurrentIdx + step + lbImages.length) % lbImages.length;
+            updateLbImage();
+        }
+        window.closeBox = function(e) {
+            if(e.target.id === 'lightbox' || e.target.id === 'lb-close') {
+                document.getElementById('lightbox').style.display = 'none';
+            }
         }
 
         function toggleCart(name, price, btn) {
@@ -421,7 +491,6 @@ $HtmlTemplate = @'
         function openLine() {
             let isDesktop = !/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             let rawId = "{{LINE_ID}}".trim();
-            
             if (isDesktop && rawId !== "") {
                 let lineUrl = rawId.startsWith('@') ? 'line://ti/p/' + rawId : 'line://ti/p/~' + rawId;
                 window.location.href = lineUrl;
@@ -455,13 +524,6 @@ $HtmlTemplate = @'
         }
 
         function showToast(msg) { let t = document.getElementById('toast'); t.innerText = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
-        function changeImg(t){ let m = t.closest('.card').querySelector('.main-img'); m.src=t.src; m.setAttribute('data-highres', t.getAttribute('data-highres')); }
-        function openBox(img){ 
-            let box = document.getElementById('lightbox'), bImg = document.getElementById('box-img'), loader = document.getElementById('loading-text'), hr = img.getAttribute('data-highres');
-            box.style.display='flex'; bImg.style.display='none';
-            if(hr){ loader.style.display='block'; let tmp = new Image(); tmp.onload = () => { bImg.src=hr; loader.style.display='none'; bImg.style.display='block'; }; tmp.onerror = () => { bImg.src=img.src; loader.style.display='none'; bImg.style.display='block'; }; tmp.src=hr; } 
-            else { bImg.src=img.src; bImg.style.display='block'; }
-        }
         
         document.getElementById('searchInput').addEventListener('input', renderGrid);
         
@@ -483,6 +545,7 @@ $HtmlTemplate = @'
             });
         });
 
+        // 初始自動依照價格低到高排序
         renderGrid();
     </script>
 </body></html>
@@ -493,8 +556,8 @@ $FinalHtml = $HtmlTemplate.Replace('{{JSON}}', $JsonString).Replace('{{TITLE}}',
 
 try {
     Write-Host "開始上傳至 GitHub..." -ForegroundColor Cyan
-    git add . ; git commit -m "Mobile UI Optimization" ; git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 瘦身成功！手機版排版已全面優化！", 64, "大功告成")
+    git add . ; git commit -m "UX Upgrade: Hover thumbs, Lightbox Nav, Sort Fix" ; git push origin main
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 更新完成！相簿與排版已全面升級！", 64, "大功告成")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 上傳 GitHub 失敗！", 48, "警告")
 }
