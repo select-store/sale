@@ -282,16 +282,17 @@ $HtmlTemplate = @'
         .card { background: #1e1e24; display: flex; flex-direction: column; height: 100%; border-radius: 16px; border: 1px solid #2a2a2a; box-sizing: border-box; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; }
         .card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
         
-        /* 圖片區域 */
-        .main-img-container { width: 100%; aspect-ratio: 1/1; position: relative; overflow: hidden; background: #111; cursor: zoom-in; }
+        /* 🔥 主圖縮小與置中優化 */
+        .img-wrapper { width: 100%; background: #111; padding: 10px 0; position: relative; display: flex; justify-content: center; align-items: center; }
+        .main-img-container { width: 80%; /* 縮小寬度為容器的 80% */ aspect-ratio: 1/1; position: relative; overflow: hidden; border-radius: 8px; cursor: zoom-in; }
         .main-img { width: 100%; height: 100%; object-fit: contain; transition: 0.3s; }
         
-        /* 方案 B：精緻懸浮縮圖 */
-        .thumb-overlay { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); padding: 5px 10px; border-radius: 16px; z-index: 10; align-items: center; border: 1px solid rgba(255,255,255,0.1); }
+        /* 方案 B：精緻懸浮縮圖 (位置微調以配合縮小的主圖) */
+        .thumb-overlay { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); padding: 5px 10px; border-radius: 16px; z-index: 10; align-items: center; border: 1px solid rgba(255,255,255,0.1); }
         .thumb-dot { width: 24px; height: 24px; background-size: cover; background-position: center; border-radius: 4px; border: 1px solid transparent; cursor: pointer; opacity: 0.6; transition: 0.3s; }
         .thumb-dot:hover, .thumb-dot.active { opacity: 1; border-color: rgba(255,255,255,0.8); transform: scale(1.05); }
         
-        /* 🔥 加回售出的大印章與圖片反灰 */
+        /* 售出的大印章 */
         .sold-badge { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-10deg); background: rgba(231, 76, 60, 0.95); color: white; padding: 10px 24px; font-weight: 900; font-size: 1.2rem; border-radius: 8px; z-index: 15; border: 3px solid white; letter-spacing: 2px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
         .sold-out .sold-badge { display: block; }
         .sold-out .main-img { filter: grayscale(100%); opacity: 0.4; }
@@ -337,7 +338,7 @@ $HtmlTemplate = @'
         
         /* 底部導覽列 */
         .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; display: flex; z-index: 1000; box-shadow: 0 -4px 20px rgba(0,0,0,0.6); pointer-events: none; }
-        .bottom-btn { pointer-events: auto; flex: 1; padding: 16px 0; text-align: center; font-size: 1.05rem; font-weight: bold; cursor: pointer; border: none; outline: none; text-decoration: none; }
+        .bottom-btn { pointer-events: auto; flex: 1; padding: 18px 0; text-align: center; font-size: 1.05rem; font-weight: bold; cursor: pointer; border: none; outline: none; text-decoration: none; }
         .btn-cart { background: #e74c3c; color: white; transition: background 0.3s; border-right: 1px solid #c0392b; }
         .btn-line { background: #06C755; color: white; transition: background 0.3s; display: flex; align-items: center; justify-content: center; }
         
@@ -417,7 +418,6 @@ $HtmlTemplate = @'
                 let currentImgIdx = cardImgState[rawIdx];
 
                 const card = document.createElement('div');
-                // 🔥 如果已售出，加上 sold-out 讓圖片變灰並顯示大印章
                 card.className = item.is_sold ? 'card sold-out' : 'card';
                 
                 const priceHtml = item.sale_price 
@@ -425,7 +425,6 @@ $HtmlTemplate = @'
                     : `<span class="price">NT$ ${item.price}</span>`;
                 const urlHtml = item.url ? `<a href="${item.url}" target="_blank" class="ref-link">🔗 原廠參考網址</a>` : '';
                 
-                // 🔥 方案 B：精緻懸浮縮圖
                 let thumbHtml = '';
                 if (item.images.length > 1) {
                     thumbHtml = `<div class="thumb-overlay" onclick="event.stopPropagation()">` + 
@@ -433,7 +432,6 @@ $HtmlTemplate = @'
                         `</div>`;
                 }
 
-                // 按鈕依舊反灰
                 let btnHtml = item.is_sold 
                     ? `<button class="btn-add btn-sold" onclick="showToast('🚫 此商品已售出，下次請早！')">🚫 已售出</button>`
                     : `<button class="btn-add" onclick="toggleCart('${item.name.replace(/'/g, "\\'")}', ${item.num_price}, this)" style="background:${cart[item.name] ? '#e67e22' : '#3498db'}">${cart[item.name] ? '✅ 已加入購買清單' : '➕ 加入購買清單'}</button>`;
@@ -443,8 +441,8 @@ $HtmlTemplate = @'
                         <div class="main-img-container" onclick="openBox(${rawIdx})">
                             <div class="sold-badge">已售出</div>
                             <img class="main-img" id="main-img-${rawIdx}" src="${item.images[currentImgIdx]}">
-                            ${thumbHtml}
                         </div>
+                        ${thumbHtml}
                     </div>
                     <div class="info">
                         <h3>${item.name}</h3>
@@ -465,9 +463,11 @@ $HtmlTemplate = @'
             cardImgState[rawIdx] = imgIdx;
             document.getElementById('main-img-' + rawIdx).src = RAW_DATA[rawIdx].images[imgIdx];
             
-            let overlay = e.target.closest('.thumb-overlay');
-            overlay.querySelectorAll('.thumb-dot').forEach(d => d.classList.remove('active'));
-            e.target.classList.add('active');
+            let overlay = e.target.closest('.img-wrapper');
+            if(overlay) {
+                overlay.querySelectorAll('.thumb-dot').forEach(d => d.classList.remove('active'));
+                e.target.classList.add('active');
+            }
         }
 
         window.openBox = function(rawIdx) {
@@ -486,7 +486,6 @@ $HtmlTemplate = @'
             
             bImg.style.display = 'none'; loader.style.display = 'block';
             
-            // 更新頁數提示器
             if (lbImages.length > 1) {
                 counter.style.display = 'block';
                 counter.innerText = (lbCurrentIdx + 1) + ' / ' + lbImages.length;
@@ -581,7 +580,6 @@ $HtmlTemplate = @'
             });
         });
 
-        // 初始自動依照價格低到高排序
         renderGrid();
     </script>
 </body></html>
@@ -592,8 +590,8 @@ $FinalHtml = $HtmlTemplate.Replace('{{JSON}}', $JsonString).Replace('{{TITLE}}',
 
 try {
     Write-Host "開始上傳至 GitHub..." -ForegroundColor Cyan
-    git add . ; git commit -m "Re-add Sold Badge with UI tweaks" ; git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 恭喜老闆！終極完美版已發布！", 64, "大功告成")
+    git add . ; git commit -m "UI Polish: Smaller Main Image" ; git push origin main
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 更新完成！圖片已經幫你縮身瘦下去了！", 64, "大功告成")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 上傳 GitHub 失敗！", 48, "警告")
 }
