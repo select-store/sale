@@ -160,8 +160,24 @@ foreach ($Key in $GroupedProducts.Keys) {
     }
 }
 
+# 🚀 5. 幽靈清除機制 (過濾掉已經沒有實體照片的舊商品)
 foreach ($Item in $ExistingItems) {
-    if (-not $ProcessedNames.ContainsKey($Item.name)) { $NewItems += $Item; $ProcessedNames[$Item.name] = $true }
+    if (-not $ProcessedNames.ContainsKey($Item.name)) {
+        $ValidImages = @()
+        if ($Item.image) {
+            foreach ($p in ($Item.image -split '\|')) {
+                $absPath = Join-Path $ScriptDir $p
+                if (Test-Path $absPath) { $ValidImages += $p }
+            }
+        }
+        
+        # 只有當商品至少還有一張照片活著時，才保留它
+        if ($ValidImages.Count -gt 0) {
+            $Item.image = ($ValidImages -join "|")
+            $NewItems += $Item
+            $ProcessedNames[$Item.name] = $true
+        }
+    }
 }
 
 # ⭐️ 庫存盤點
@@ -279,10 +295,7 @@ foreach ($Item in $NewItems) {
         }
     }
     
-    if ($Base64List.Count -eq 0) { 
-        $Base64List += "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
-        $HighResList += "" 
-    }
+    if ($Base64List.Count -eq 0) { continue } # 防呆：如果完全沒照片，就不渲染這張卡片
 
     $MainBase64 = $Base64List[0]
     $MainHighRes = $HighResList[0]
@@ -342,13 +355,13 @@ $HtmlEnd = @"
 $OutPath = Join-Path $ScriptDir "index.html"
 [System.IO.File]::WriteAllText($OutPath, ($HtmlStart + $CardsHtml + $HtmlEnd), [System.Text.Encoding]::UTF8)
 
-# ==== 🚀 自動上傳 GitHub 引擎重啟 ====
+# ==== 🚀 自動上傳 GitHub ====
 try {
     Write-Host "開始上傳至 GitHub..." -ForegroundColor Cyan
     git add .
     git commit -m "Auto-update: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
     git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 完美發布！網頁與圖片已全自動上傳至 GitHub！", 64, "大功告成")
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 完美發布！幽靈商品已清除，並成功上傳！", 64, "大功告成")
 } catch {
-    [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 網頁已生成，但 GitHub 上傳失敗！請檢查網路或 Git 設定。", 48, "上傳警告")
+    [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 網頁已生成，但 GitHub 上傳失敗！", 48, "上傳警告")
 }
