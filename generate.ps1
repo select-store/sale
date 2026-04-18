@@ -68,7 +68,6 @@ if (Test-Path $ImageFolder) {
         if (-not $SeenFiles.ContainsKey($FileNameKey)) { $SeenFiles[$FileNameKey] = $true; $Photos += $img }
     }
 } 
-if ($Photos.Count -eq 0) { [Microsoft.VisualBasic.Interaction]::MsgBox("❌ images 資料夾內找不到照片！", 48, "錯誤"); exit }
 
 $GroupedProducts = @{}
 foreach ($Photo in $Photos) {
@@ -160,23 +159,11 @@ foreach ($Key in $GroupedProducts.Keys) {
     }
 }
 
-# 🚀 5. 幽靈清除機制 (過濾掉已經沒有實體照片的舊商品)
+# 🚀 5. 絕對防護機制：無條件保留所有舊資料，就算照片不見也絕對不刪除！
 foreach ($Item in $ExistingItems) {
     if (-not $ProcessedNames.ContainsKey($Item.name)) {
-        $ValidImages = @()
-        if ($Item.image) {
-            foreach ($p in ($Item.image -split '\|')) {
-                $absPath = Join-Path $ScriptDir $p
-                if (Test-Path $absPath) { $ValidImages += $p }
-            }
-        }
-        
-        # 只有當商品至少還有一張照片活著時，才保留它
-        if ($ValidImages.Count -gt 0) {
-            $Item.image = ($ValidImages -join "|")
-            $NewItems += $Item
-            $ProcessedNames[$Item.name] = $true
-        }
+        $NewItems += $Item
+        $ProcessedNames[$Item.name] = $true
     }
 }
 
@@ -295,7 +282,10 @@ foreach ($Item in $NewItems) {
         }
     }
     
-    if ($Base64List.Count -eq 0) { continue } # 防呆：如果完全沒照片，就不渲染這張卡片
+    if ($Base64List.Count -eq 0) { 
+        $Base64List += "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+        $HighResList += "" 
+    }
 
     $MainBase64 = $Base64List[0]
     $MainHighRes = $HighResList[0]
@@ -361,7 +351,7 @@ try {
     git add .
     git commit -m "Auto-update: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
     git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 完美發布！幽靈商品已清除，並成功上傳！", 64, "大功告成")
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 安全復原版已發布！你的舊資料絕對不會再被自動刪除了！", 64, "大功告成")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 網頁已生成，但 GitHub 上傳失敗！", 48, "上傳警告")
 }
