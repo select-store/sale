@@ -173,7 +173,6 @@ $formManage.Size = "1100,600"; $formManage.StartPosition = "CenterScreen"; $form
 $grid = New-Object System.Windows.Forms.DataGridView; $grid.DataSource = $dt; $grid.Dock = "Fill"; $grid.AutoSizeColumnsMode = "Fill"; $grid.AllowUserToAddRows = $false; $grid.RowHeadersVisible = $false
 $formManage.Controls.Add($grid)
 
-# 實作置頂最多 2 個的防呆機制
 $grid.add_CurrentCellDirtyStateChanged({
     if ($grid.IsCurrentCellDirty) { $grid.CommitEdit([System.Windows.Forms.DataGridViewDataErrorContexts]::Commit) }
 })
@@ -213,10 +212,8 @@ if ($formManage.ShowDialog() -eq "OK") {
     foreach ($row in $dt.Rows) {
         if ($row["徹底刪除"] -eq $true) { continue }
         $finalDesc = $row["商品描述"].ToString()
-        # 依照順序壓入標籤
         if ($row["置頂"]) { $finalDesc = "[置頂] " + $finalDesc }
         if ($row["售出"]) { $finalDesc = "[售出] " + $finalDesc }
-        
         $FinalItems += [PSCustomObject]@{ name=$row["商品名稱"].ToString().Trim(); price=$row["原價"].ToString(); sale_price=$row["特價"].ToString(); desc=$finalDesc; url=$row["參考網址"].ToString(); image=$row["圖片路徑"].ToString() }
     }
     $NewItems = $FinalItems 
@@ -273,7 +270,7 @@ foreach ($Item in $NewItems) {
 }
 $JsonString = $WebData | ConvertTo-Json -Depth 5 -Compress
 
-# 🔥 純淨 HTML/JS 模板 (霸氣單欄 + 字體放大 + 解除字數封印)
+# 🔥 純淨 HTML/JS 模板 (霸氣單欄 + 底部篩選抽屜)
 $HtmlTemplate = @'
 <!DOCTYPE html>
 <html lang="zh-TW"><head>
@@ -288,22 +285,39 @@ $HtmlTemplate = @'
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #555; }
         
-        .top-nav { background: rgba(26, 26, 26, 0.75); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 15px 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
-        .search-box { width: 100%; max-width: 800px; margin: 0 auto 12px; display: block; padding: 12px 20px; border: 1px solid #444; border-radius: 25px; background: rgba(36, 36, 36, 0.9); color: #fff; box-sizing: border-box; font-size: 1rem; outline: none; transition: 0.3s; font-family: 'Noto Sans TC', sans-serif; }
+        /* 🔥 A. 頂部極簡化設計 (釋放手機空間) */
+        .top-nav { background: rgba(26, 26, 26, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 12px 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        .search-row { display: flex; gap: 12px; align-items: center; max-width: 1400px; margin: 0 auto; }
+        .search-box { flex-grow: 1; margin: 0; padding: 12px 20px; border: 1px solid #444; border-radius: 25px; background: rgba(36, 36, 36, 0.9); color: #fff; box-sizing: border-box; font-size: 1rem; outline: none; transition: 0.3s; font-family: 'Noto Sans TC', sans-serif; }
         .search-box:focus { border-color: #3498db; background: #222; }
         
-        .filter-container { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 800px; margin: 0 auto; }
-        .btn-group { display: flex; gap: 8px; width: 100%; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; white-space: nowrap; }
-        .btn-group::-webkit-scrollbar { display: none; }
+        .btn-open-filter { flex-shrink: 0; background: #2a2a2a; color: #eee; border: 1px solid #555; border-radius: 25px; padding: 12px 20px; font-size: 0.95rem; cursor: pointer; font-family: 'Noto Sans TC', sans-serif; font-weight: bold; transition: 0.2s; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        .btn-open-filter:hover { background: #333; border-color: #777; }
+        .btn-open-filter:active { transform: scale(0.95); }
         
-        .filter-btn, .sort-btn { flex-shrink: 0; background: rgba(42, 42, 42, 0.8); border: 1px solid #444; padding: 8px 16px; border-radius: 20px; cursor: pointer; color: #ccc; font-size: 0.95rem; transition: 0.2s; font-family: 'Noto Sans TC', sans-serif; }
-        .filter-btn.active { background: #3498db; color: white; border-color: #3498db; }
+        /* 🔥 A. 底部篩選抽屜 (Filter Drawer) */
+        #filter-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 10002; opacity: 0; pointer-events: none; transition: 0.3s; }
+        #filter-overlay.show { opacity: 1; pointer-events: auto; }
+        
+        #filter-drawer { position: fixed; bottom: 0; left: 0; width: 100%; background: #1e1e24; border-radius: 24px 24px 0 0; z-index: 10003; transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); box-shadow: 0 -10px 30px rgba(0,0,0,0.6); padding: 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px; max-height: 85vh; overflow-y: auto; }
+        #filter-drawer.show { transform: translateY(0); }
+        
+        .drawer-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #444; padding-bottom: 16px; margin-bottom: 8px; }
+        .drawer-header h3 { margin: 0; font-size: 1.25rem; color: #fff; font-weight: 900; }
+        .drawer-close { background: rgba(255,255,255,0.1); border: none; color: #fff; width: 36px; height: 36px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; }
+        .drawer-close:hover { background: rgba(255,255,255,0.2); }
+        
+        .filter-section-title { font-size: 0.95rem; color: #aaa; margin-bottom: 12px; font-weight: bold; letter-spacing: 1px; }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+        .filter-btn, .sort-btn { background: rgba(42, 42, 42, 0.8); border: 1px solid #555; padding: 10px 18px; border-radius: 20px; cursor: pointer; color: #ccc; font-size: 1rem; transition: 0.2s; font-family: 'Noto Sans TC', sans-serif; font-weight: 500; }
+        .filter-btn.active { background: #3498db; color: white; border-color: #3498db; font-weight: bold; box-shadow: 0 4px 12px rgba(52,152,219,0.3); }
         .sort-btn { background: rgba(44, 62, 80, 0.8); border-color: #34495e; }
-        .sort-btn.active { background: #e67e22; color: white; border-color: #e67e22; font-weight: bold; }
-
-        @media (max-width: 600px) { .filter-divider { display: none; } }
+        .sort-btn.active { background: #e67e22; color: white; border-color: #e67e22; font-weight: bold; box-shadow: 0 4px 12px rgba(230,126,34,0.3); }
         
-        /* 🔥 B. 單欄霸氣滿版網格 (手機版 1 欄) */
+        .btn-confirm-filter { background: #06C755; color: white; border: none; border-radius: 12px; padding: 16px; font-size: 1.15rem; font-weight: bold; cursor: pointer; margin-top: 10px; font-family: 'Noto Sans TC', sans-serif; box-shadow: 0 4px 15px rgba(6,199,85,0.3); transition: 0.2s; }
+        .btn-confirm-filter:active { transform: scale(0.98); }
+
+        /* 🔥 B. 霸氣單欄滿版網格 (手機版 1 欄) - 保留設定 */
         .grid-container { display: grid; grid-template-columns: 1fr; gap: 24px; padding: 16px; max-width: 1400px; margin: 0 auto; min-height: 400px; transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
         body.search-focused .grid-container { filter: blur(5px) brightness(0.4); pointer-events: none; transform: scale(0.98); }
         
@@ -313,7 +327,7 @@ $HtmlTemplate = @'
         .empty-state p { margin: 0 0 20px; font-size: 0.9rem; }
         .btn-reset { background: #3498db; color: #fff; border: none; padding: 10px 24px; border-radius: 24px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: 0.2s; box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3); font-family: 'Noto Sans TC', sans-serif; }
 
-        /* 卡片設計 - 內距加大 */
+        /* 卡片設計 - 單欄大空間 */
         .card { background: #1e1e24; display: flex; flex-direction: column; height: 100%; border-radius: 16px; border: 1px solid #2a2a2a; box-sizing: border-box; overflow: hidden; transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s; padding: 18px; animation: cardEnter 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; position: relative; }
         .card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.08); }
         @keyframes cardEnter { from { opacity: 0; transform: translateY(30px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
@@ -321,13 +335,12 @@ $HtmlTemplate = @'
         .card.pinned { border-color: rgba(238, 130, 238, 0.5); box-shadow: 0 4px 20px rgba(238, 130, 238, 0.08); }
         .card.pinned:hover { box-shadow: 0 12px 32px rgba(238, 130, 238, 0.2), inset 0 0 0 1px rgba(238, 130, 238, 0.6); }
         
-        /* 圖片容器 - 單欄後可以變大 */
         .img-wrapper { width: 100%; position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 16px; }
         .main-img-container { width: 100%; max-width: 350px; aspect-ratio: 1/1; position: relative; border-radius: 12px; cursor: zoom-in; background: #1a1a1a; }
         .main-img { width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity 0.4s ease-in-out; }
         .main-img.loaded { opacity: 1; }
         
-        /* 狀態膠囊 - 字體放大 */
+        /* 狀態膠囊 - 紫色線框風格，字體放大 */
         .status-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; } 
         .pin-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.5px; border: 1px solid #EE82EE; color: #EE82EE; background: rgba(238, 130, 238, 0.1); }
         .pin-badge i { font-style: normal; color: #EE82EE; } 
@@ -347,8 +360,8 @@ $HtmlTemplate = @'
         .sold-out .sold-badge { display: block; }
         .sold-out .main-img { filter: grayscale(100%); opacity: 0.4; }
         
-        .info { flex-grow: 1; display: flex; flex-direction: column; padding: 0 0 12px 0; }
         /* 🔥 B. 解除行數封印，字體放大 */
+        .info { flex-grow: 1; display: flex; flex-direction: column; padding: 0 0 12px 0; }
         h3 { margin: 0 0 10px 0; font-size: 1.25rem; color: #fff; line-height: 1.4; font-weight: 700; display: block; word-break: break-word; }
         
         .price-container { margin-bottom: 12px; display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; font-family: 'Noto Sans TC', sans-serif; }
@@ -357,13 +370,10 @@ $HtmlTemplate = @'
         .old-price { color: #888; text-decoration: line-through; font-size: 1rem; font-weight: 500; }
         .new-price { color: #ff6b6b; font-weight: 900; font-size: 1.4rem; background: rgba(255, 107, 107, 0.15); padding: 4px 8px; border-radius: 6px; }
         
-        /* 🔥 B. 描述解除封印，完整顯示，字體加大，保留斷行 */
         .desc { font-size: 1rem; color: #aaa; margin: 0 0 16px 0; line-height: 1.6; display: block; white-space: pre-line; word-break: break-word; }
-        
         .ref-link { font-size: 0.95rem; color: #3498db; text-decoration: none; font-weight: 600; margin-top: auto; display: inline-block; padding-top: 10px; border-top: 1px dashed #444; }
         
         .card-actions { margin-top: auto; }
-        /* 🔥 B. 按鈕變大變好按 */
         .btn-add { font-family: 'Noto Sans TC', sans-serif; background: #3498db; color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1.1rem; width: 100%; transition: background 0.2s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 6px; position: relative; overflow: hidden; letter-spacing: 1px; }
         .btn-add::after { content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(to right, transparent, rgba(255,255,255,0.4), transparent); transform: skewX(-20deg); animation: shineSweep 3s infinite ease-in-out; }
         @keyframes shineSweep { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
@@ -371,6 +381,7 @@ $HtmlTemplate = @'
         .btn-sold { background: #444 !important; color: #aaa !important; pointer-events: none; }
         .btn-sold::after { display: none; } 
         
+        /* 劇院相簿與雜項 */
         #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; overflow: hidden; }
         #lb-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center; filter: blur(40px) brightness(0.4); z-index: -1; transform: scale(1.1); transition: background-image 0.4s ease-in-out; }
         #lightbox img { max-width: 90%; max-height: 85vh; object-fit: contain; z-index: 1; box-shadow: 0 10px 40px rgba(0,0,0,0.6); border-radius: 8px; }
@@ -413,7 +424,7 @@ $HtmlTemplate = @'
         .modal-total .currency { color: #ff6b6b; }
         .btn-confirm { width: 100%; background: #06C755; color: white; border: none; padding: 16px; border-radius: 12px; font-size: 1.15rem; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 15px rgba(6, 199, 85, 0.3); font-family: 'Noto Sans TC', sans-serif; }
 
-        /* 🖥️ 桌機版排版覆蓋 (響應式斷點) */
+        /* 🖥️ 桌機版排版覆蓋 (支援桌機版置中抽屜) */
         @media (min-width: 600px) {
             .grid-container { grid-template-columns: repeat(2, 1fr); padding: 24px; }
         }
@@ -421,8 +432,9 @@ $HtmlTemplate = @'
             body { padding-bottom: 0; }
             .grid-container { grid-template-columns: repeat(3, 1fr); }
             
-            .filter-container { flex-direction: row; justify-content: space-between; } 
-            .btn-group { width: auto; overflow: visible; padding: 0; }
+            /* 桌機版抽屜變形為 Modal */
+            #filter-drawer { max-width: 500px; left: 50%; bottom: auto; top: 50%; transform: translate(-50%, -50%) scale(0.9); opacity: 0; pointer-events: none; border-radius: 20px; }
+            #filter-drawer.show { transform: translate(-50%, -50%) scale(1); opacity: 1; pointer-events: auto; }
             
             .bottom-bar { bottom: 30px; right: 30px; left: auto; transform: none; width: auto; flex-direction: column; gap: 15px; box-shadow: none; background: transparent; backdrop-filter: none; }
             .bottom-btn { border-radius: 50px; padding: 14px 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border: none; flex: none; width: auto; font-size: 1.05rem; }
@@ -442,8 +454,20 @@ $HtmlTemplate = @'
     </style>
 </head><body>
     <div class="top-nav" id="top-nav">
-        <input type="text" id="searchInput" class="search-box" placeholder="🔍 搜尋商品或描述...">
-        <div class="filter-container">
+        <div class="search-row">
+            <input type="text" id="searchInput" class="search-box" placeholder="🔍 搜尋商品或描述...">
+            <button class="btn-open-filter" onclick="openFilterDrawer()">⚙️ 篩選</button>
+        </div>
+    </div>
+    
+    <div id="filter-overlay" onclick="closeFilterDrawer()"></div>
+    <div id="filter-drawer">
+        <div class="drawer-header">
+            <h3>⚙️ 篩選與排序</h3>
+            <button class="drawer-close" onclick="closeFilterDrawer()">✕</button>
+        </div>
+        <div>
+            <div class="filter-section-title">標籤篩選</div>
             <div class="btn-group">
                 <button class="filter-btn active" data-tag="all">全部</button>
                 <button class="filter-btn" data-tag="未售出">#未售出</button>
@@ -451,11 +475,15 @@ $HtmlTemplate = @'
                 <button class="filter-btn" data-tag="全新">#全新</button>
                 <button class="filter-btn" data-tag="二手">#二手</button>
             </div>
+        </div>
+        <div>
+            <div class="filter-section-title">排序方式</div>
             <div class="btn-group">
                 <button class="sort-btn active" data-sort="asc">價格低到高 ⭡</button>
                 <button class="sort-btn" data-sort="desc">價格高到低 ⭣</button>
             </div>
         </div>
+        <button class="btn-confirm-filter" onclick="closeFilterDrawer()">查看結果</button>
     </div>
     
     <div class="grid-container" id="productGrid"></div>
@@ -521,6 +549,18 @@ $HtmlTemplate = @'
             lastScrollY = window.scrollY;
         });
 
+        // 🔥 A. 抽屜控制 JS
+        window.openFilterDrawer = function() {
+            document.getElementById('filter-drawer').classList.add('show');
+            document.getElementById('filter-overlay').classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+        window.closeFilterDrawer = function() {
+            document.getElementById('filter-drawer').classList.remove('show');
+            document.getElementById('filter-overlay').classList.remove('show');
+            document.body.style.overflow = '';
+        }
+
         function renderGrid() {
             const grid = document.getElementById('productGrid');
             grid.innerHTML = '';
@@ -548,7 +588,7 @@ $HtmlTemplate = @'
                         <div class="empty-state-icon">📦</div>
                         <h2>Oops！找不到商品</h2>
                         <p>試試看其他關鍵字，或是換個篩選條件吧！</p>
-                        <button class="btn-reset" onclick="resetFilters()">清除所有篩選</button>
+                        <button class="btn-reset" onclick="resetFilters(); closeFilterDrawer();">清除所有篩選</button>
                     </div>
                 `;
                 return;
@@ -823,8 +863,8 @@ $FinalHtml = $HtmlTemplate.Replace('{{JSON}}', $JsonString).Replace('{{TITLE}}',
 
 try {
     Write-Host "開始上傳至 GitHub..." -ForegroundColor Cyan
-    git add . ; git commit -m "Mobile UI: Single Column, Large Fonts, Full Description Unclamped" ; git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 升級完成！手機版已切換為霸氣單欄滿版，字體清晰、描述完整顯示！", 64, "介面升級")
+    git add . ; git commit -m "UI Final: Single Column Big Font + Bottom Filter Drawer" ; git push origin main
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 大功告成！單欄霸氣滿版加上超省空間的「底部篩選抽屜」已全部部署完畢！", 64, "旗艦版上線")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 上傳 GitHub 失敗！", 48, "警告")
 }
