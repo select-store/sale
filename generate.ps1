@@ -246,15 +246,15 @@ foreach ($Item in $NewItems) {
 }
 $JsonString = $WebData | ConvertTo-Json -Depth 5 -Compress
 
-# 🔥 純淨 HTML/JS 模板 (終極神級藝術版)
+# 🔥 純淨 HTML/JS 模板 (終極神級藝術版 - 手機版徹底重構)
 $HtmlTemplate = @'
 <!DOCTYPE html>
 <html lang="zh-TW"><head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{{TITLE}}</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif; background: #121212; color: #eee; margin: 0; padding-bottom: 80px; line-height: 1.5; scroll-behavior: smooth; }
+        body { font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif; background: #121212; color: #eee; margin: 0; padding-bottom: 90px; line-height: 1.5; scroll-behavior: smooth; }
         
         /* 客製化捲軸 */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -262,151 +262,169 @@ $HtmlTemplate = @'
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #555; }
         
-        /* 毛玻璃導覽列 */
-        .top-nav { background: rgba(26, 26, 26, 0.75); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 15px 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
-        .search-box { width: 100%; max-width: 800px; margin: 0 auto 15px; display: block; padding: 12px 20px; border: 1px solid #444; border-radius: 25px; background: rgba(36, 36, 36, 0.9); color: #fff; box-sizing: border-box; font-size: 1rem; outline: none; transition: 0.3s; font-family: 'Noto Sans TC', sans-serif; }
+        /* 🔥 B. 智慧隱藏毛玻璃導覽列 */
+        .top-nav { background: rgba(26, 26, 26, 0.75); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 15px 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        .search-box { width: 100%; max-width: 800px; margin: 0 auto 12px; display: block; padding: 10px 20px; border: 1px solid #444; border-radius: 25px; background: rgba(36, 36, 36, 0.9); color: #fff; box-sizing: border-box; font-size: 0.95rem; outline: none; transition: 0.3s; font-family: 'Noto Sans TC', sans-serif; }
         .search-box:focus { border-color: #3498db; background: #222; }
         
-        .filter-container { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 800px; margin: 0 auto; }
-        .btn-group { display: flex; gap: 8px; width: 100%; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+        .filter-container { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 800px; margin: 0 auto; }
+        .btn-group { display: flex; gap: 8px; width: 100%; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; white-space: nowrap; }
         .btn-group::-webkit-scrollbar { display: none; }
         
-        .filter-btn, .sort-btn { white-space: nowrap; flex-shrink: 0; background: rgba(42, 42, 42, 0.8); border: 1px solid #444; padding: 6px 16px; border-radius: 20px; cursor: pointer; color: #ccc; font-size: 0.9rem; transition: 0.2s; font-family: 'Noto Sans TC', sans-serif; }
+        .filter-btn, .sort-btn { flex-shrink: 0; background: rgba(42, 42, 42, 0.8); border: 1px solid #444; padding: 6px 14px; border-radius: 20px; cursor: pointer; color: #ccc; font-size: 0.85rem; transition: 0.2s; font-family: 'Noto Sans TC', sans-serif; }
         .filter-btn.active { background: #3498db; color: white; border-color: #3498db; }
         .sort-btn { background: rgba(44, 62, 80, 0.8); border-color: #34495e; }
         .sort-btn.active { background: #e67e22; color: white; border-color: #e67e22; font-weight: bold; }
 
         @media (max-width: 600px) { .filter-divider { display: none; } }
         
-        /* 🔥 A. Spotlight 沉浸搜尋特效 */
-        .grid-container { display: grid; grid-template-columns: 1fr; gap: 16px; padding: 20px 16px; max-width: 1400px; margin: 0 auto; min-height: 400px; transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        /* 🔥 A. 手機版雙欄迷你網格 */
+        .grid-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 16px 12px; max-width: 1400px; margin: 0 auto; min-height: 400px; transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
         body.search-focused .grid-container { filter: blur(5px) brightness(0.4); pointer-events: none; transform: scale(0.98); }
         
-        @media (min-width: 550px) { .grid-container { grid-template-columns: repeat(2, 1fr); gap: 20px; padding: 24px; } }
-        @media (min-width: 850px) { .grid-container { grid-template-columns: repeat(3, 1fr); gap: 24px; } }
-        @media (min-width: 1200px) { .grid-container { grid-template-columns: repeat(4, 1fr); gap: 28px; } }
-        
         /* 溫馨空狀態 */
-        .empty-state { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 20px; text-align: center; color: #888; animation: cardEnter 0.5s ease both; }
-        .empty-state-icon { font-size: 4rem; margin-bottom: 16px; opacity: 0.6; }
-        .empty-state h2 { font-size: 1.5rem; color: #ddd; margin: 0 0 8px; }
-        .empty-state p { margin: 0 0 24px; font-size: 1rem; }
-        .btn-reset { background: #3498db; color: #fff; border: none; padding: 12px 28px; border-radius: 24px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: 0.2s; box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3); font-family: 'Noto Sans TC', sans-serif; }
-        .btn-reset:hover { background: #2980b9; transform: translateY(-2px); }
+        .empty-state { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 10px; text-align: center; color: #888; animation: cardEnter 0.5s ease both; }
+        .empty-state-icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.6; }
+        .empty-state h2 { font-size: 1.2rem; color: #ddd; margin: 0 0 8px; }
+        .empty-state p { margin: 0 0 20px; font-size: 0.9rem; }
+        .btn-reset { background: #3498db; color: #fff; border: none; padding: 10px 24px; border-radius: 24px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: 0.2s; box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3); font-family: 'Noto Sans TC', sans-serif; }
 
-        /* 蘋果風卡片邊緣光暈 + 絲滑進場 */
-        .card { background: #1e1e24; display: flex; flex-direction: column; height: 100%; border-radius: 16px; border: 1px solid #2a2a2a; box-sizing: border-box; overflow: hidden; transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease; padding: 18px; animation: cardEnter 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; position: relative; }
+        /* 卡片設計 - 手機版微調 */
+        .card { background: #1e1e24; display: flex; flex-direction: column; height: 100%; border-radius: 12px; border: 1px solid #2a2a2a; box-sizing: border-box; overflow: hidden; transition: transform 0.3s, box-shadow 0.3s; padding: 12px; animation: cardEnter 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; position: relative; }
         .card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.08); }
         @keyframes cardEnter { from { opacity: 0; transform: translateY(30px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
         
-        .img-wrapper { width: 100%; position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 12px; }
-        .main-img-container { width: 85%; max-width: 260px; aspect-ratio: 1/1; position: relative; border-radius: 8px; cursor: zoom-in; background: #1a1a1a; }
+        .img-wrapper { width: 100%; position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 10px; }
+        .main-img-container { width: 90%; max-width: 260px; aspect-ratio: 1/1; position: relative; border-radius: 8px; cursor: zoom-in; background: #1a1a1a; }
         .main-img { width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity 0.4s ease-in-out; }
         .main-img.loaded { opacity: 1; }
         
-        .condition-badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; letter-spacing: 1px; margin-bottom: 10px; }
+        .condition-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 6px; }
         .badge-new { background: rgba(230, 126, 34, 0.15); color: #e67e22; border: 1px solid rgba(230, 126, 34, 0.4); }
         .badge-used { background: rgba(255, 255, 255, 0.08); color: #cccccc; border: 1px solid rgba(255, 255, 255, 0.2); }
 
-        /* 終極懸浮預覽 */
-        .thumb-overlay-container { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 85%; max-width: 220px; display: flex; justify-content: center; z-index: 10; }
-        .thumb-scroll-area { display: flex; gap: 6px; background: rgba(20, 20, 20, 0.65); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 6px 12px; border-radius: 24px; align-items: center; border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.5); overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; scroll-behavior: smooth; }
-        .thumb-scroll-area::-webkit-scrollbar { display: none; }
-        .thumb-dot { flex-shrink: 0; width: 26px; height: 26px; background-size: cover; background-position: center; border-radius: 50%; cursor: pointer; filter: brightness(0.6) saturate(0.7); border: 2px solid transparent; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); background-color: #111; }
+        /* 手機版縮小懸浮預覽 */
+        .thumb-overlay-container { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); width: 90%; display: flex; justify-content: center; z-index: 10; }
+        .thumb-scroll-area { display: flex; gap: 4px; background: rgba(20, 20, 20, 0.65); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 4px 8px; border-radius: 20px; align-items: center; border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.5); overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; scroll-behavior: smooth; }
+        .thumb-dot { flex-shrink: 0; width: 20px; height: 20px; background-size: cover; background-position: center; border-radius: 50%; cursor: pointer; filter: brightness(0.6) saturate(0.7); border: 2px solid transparent; transition: all 0.3s; background-color: #111; }
         .thumb-dot:hover { transform: scale(1.3); filter: brightness(1) saturate(1); z-index: 2; }
-        .thumb-dot.active { filter: brightness(1) saturate(1); border-color: rgba(255, 255, 255, 0.9); box-shadow: 0 0 10px rgba(255, 255, 255, 0.4); transform: scale(1.15); }
+        .thumb-dot.active { filter: brightness(1) saturate(1); border-color: rgba(255, 255, 255, 0.9); box-shadow: 0 0 8px rgba(255, 255, 255, 0.4); transform: scale(1.15); }
         .thumb-scroll-area:hover .thumb-dot.active:not(:hover) { transform: scale(1); box-shadow: none; border-color: rgba(255, 255, 255, 0.4); }
         
-        .sold-badge { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-10deg); background: rgba(231, 76, 60, 0.95); color: white; padding: 10px 24px; font-weight: 900; font-size: 1.2rem; border-radius: 8px; z-index: 15; border: 3px solid white; letter-spacing: 2px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .sold-badge { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-10deg); background: rgba(231, 76, 60, 0.95); color: white; padding: 6px 14px; font-weight: 900; font-size: 1rem; border-radius: 6px; z-index: 15; border: 2px solid white; letter-spacing: 1px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
         .sold-out .sold-badge { display: block; }
         .sold-out .main-img { filter: grayscale(100%); opacity: 0.4; }
         
-        .info { flex-grow: 1; display: flex; flex-direction: column; padding: 0 0 16px 0; }
-        h3 { margin: 0 0 10px 0; font-size: 1.05rem; color: #fff; line-height: 1.4; font-weight: 700; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; }
+        /* 文字資訊區 - 手機微調 */
+        .info { flex-grow: 1; display: flex; flex-direction: column; padding: 0 0 10px 0; }
+        h3 { margin: 0 0 6px 0; font-size: 0.85rem; color: #fff; line-height: 1.4; font-weight: 700; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; }
         
-        .price-container { margin-bottom: 12px; display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; font-family: 'Noto Sans TC', sans-serif; }
+        .price-container { margin-bottom: 8px; display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; font-family: 'Noto Sans TC', sans-serif; }
         .currency { font-size: 0.7em; font-weight: 500; margin-right: 2px; }
-        .price { color: #ff6b6b; font-weight: 900; font-size: 1.2rem; }
-        .old-price { color: #888; text-decoration: line-through; font-size: 0.9rem; font-weight: 500; }
-        .new-price { color: #ff6b6b; font-weight: 900; font-size: 1.2rem; background: rgba(255, 107, 107, 0.15); padding: 3px 8px; border-radius: 6px; }
+        .price { color: #ff6b6b; font-weight: 900; font-size: 1.05rem; }
+        .old-price { color: #888; text-decoration: line-through; font-size: 0.75rem; font-weight: 500; }
+        .new-price { color: #ff6b6b; font-weight: 900; font-size: 1.05rem; background: rgba(255, 107, 107, 0.15); padding: 2px 6px; border-radius: 4px; }
         
-        .desc { font-size: 0.9rem; color: #999; margin: 0 0 12px 0; line-height: 1.6; white-space: pre-line; }
-        .ref-link { font-size: 0.85rem; color: #3498db; text-decoration: none; font-weight: 600; margin-top: auto; display: inline-block; padding-top: 12px; border-top: 1px dashed #333; transition: 0.2s; }
-        .ref-link:hover { color: #5dade2; }
+        .desc { font-size: 0.8rem; color: #999; margin: 0 0 8px 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; }
+        .ref-link { font-size: 0.75rem; color: #3498db; text-decoration: none; font-weight: 600; margin-top: auto; display: inline-block; padding-top: 8px; border-top: 1px dashed #333; }
         
-        /* 🔥 B. 購買按鈕「流光溢彩」特效 */
+        /* 購買按鈕 */
         .card-actions { margin-top: auto; }
-        .btn-add { font-family: 'Noto Sans TC', sans-serif; background: #3498db; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem; width: 100%; transition: background 0.2s, transform 0.1s; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 6px; position: relative; overflow: hidden; }
+        .btn-add { font-family: 'Noto Sans TC', sans-serif; background: #3498db; color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; width: 100%; transition: background 0.2s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 4px; position: relative; overflow: hidden; }
         .btn-add::after { content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(to right, transparent, rgba(255,255,255,0.4), transparent); transform: skewX(-20deg); animation: shineSweep 3s infinite ease-in-out; }
         @keyframes shineSweep { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
-        .btn-add:hover { background: #2980b9; }
-        .btn-add:active { transform: scale(0.98); }
-        .btn-sold { background: #444 !important; color: #aaa !important; cursor: not-allowed !important; }
-        .btn-sold::after { display: none; } /* 售出拔除光影 */
+        .btn-add:active { transform: scale(0.96); }
+        .btn-sold { background: #444 !important; color: #aaa !important; pointer-events: none; }
+        .btn-sold::after { display: none; } 
         
-        /* 🔥 C. 劇院級沉浸相簿背景 (模糊底圖) */
+        /* 劇院級沉浸相簿背景 */
         #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; overflow: hidden; }
         #lb-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center; filter: blur(40px) brightness(0.4); z-index: -1; transform: scale(1.1); transition: background-image 0.4s ease-in-out; }
         #lightbox img { max-width: 90%; max-height: 85vh; object-fit: contain; z-index: 1; box-shadow: 0 10px 40px rgba(0,0,0,0.6); border-radius: 8px; }
         
         #lb-counter { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); color: white; font-size: 1rem; font-weight: bold; background: rgba(0,0,0,0.6); padding: 4px 16px; border-radius: 20px; z-index: 10001; letter-spacing: 1px; backdrop-filter: blur(4px); }
-        .lb-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.1); color: white; border: none; font-size: 2rem; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; cursor: pointer; border-radius: 50%; z-index: 10001; transition: 0.3s; user-select: none; backdrop-filter: blur(4px); }
-        .lb-nav:hover { background: rgba(255,255,255,0.3); }
-        #lb-prev { left: 15px; }
-        #lb-next { right: 15px; }
-        #lb-close { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.1); width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: white; border: none; font-size: 1.5rem; cursor: pointer; z-index: 10001; transition: 0.3s; backdrop-filter: blur(4px); }
-        #lb-close:hover { background: rgba(255,255,255,0.3); }
+        .lb-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.1); color: white; border: none; font-size: 1.5rem; width: 40px; height: 40px; display: flex; justify-content: center; align-items: center; cursor: pointer; border-radius: 50%; z-index: 10001; transition: 0.3s; backdrop-filter: blur(4px); }
+        #lb-prev { left: 10px; }
+        #lb-next { right: 10px; }
+        #lb-close { position: absolute; top: 20px; right: 15px; background: rgba(255,255,255,0.1); width: 36px; height: 36px; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: white; border: none; font-size: 1.2rem; cursor: pointer; z-index: 10001; backdrop-filter: blur(4px); }
 
         /* 動態島 Toast 通知 */
-        #toast { visibility: hidden; min-width: auto; background: rgba(30, 30, 30, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: #fff; text-align: center; border-radius: 30px; padding: 12px 24px; position: fixed; z-index: 10000; left: 50%; bottom: 100px; font-size: 1rem; transform: translate(-50%, 20px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); font-weight: bold; border: 1px solid rgba(255,255,255,0.1); pointer-events: none; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+        #toast { visibility: hidden; min-width: auto; background: rgba(30, 30, 30, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: #fff; text-align: center; border-radius: 30px; padding: 10px 20px; position: fixed; z-index: 10000; left: 50%; bottom: 100px; font-size: 0.95rem; transform: translate(-50%, 20px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); font-weight: bold; border: 1px solid rgba(255,255,255,0.1); pointer-events: none; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
         #toast.show { visibility: visible; opacity: 1; transform: translate(-50%, 0); }
         
-        .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; display: flex; z-index: 1000; box-shadow: 0 -4px 20px rgba(0,0,0,0.6); pointer-events: none; }
-        .bottom-btn { font-family: 'Noto Sans TC', sans-serif; pointer-events: auto; flex: 1; padding: 18px 0; text-align: center; font-size: 1.05rem; font-weight: bold; cursor: pointer; border: none; outline: none; text-decoration: none; }
-        .btn-cart { background: #e74c3c; color: white; transition: background 0.3s; border-right: 1px solid #c0392b; transform-origin: center bottom; }
-        .btn-line { background: #06C755; color: white; transition: background 0.3s; display: flex; align-items: center; justify-content: center; }
+        /* 🔥 C. 懸浮膠囊結帳列 (手機版專屬) */
+        .bottom-bar { 
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); 
+            width: calc(100% - 32px); max-width: 400px; display: flex; z-index: 1000; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); pointer-events: auto; 
+            border-radius: 30px; overflow: hidden; background: rgba(30,30,30,0.8); backdrop-filter: blur(10px);
+        }
+        .bottom-btn { font-family: 'Noto Sans TC', sans-serif; flex: 1; padding: 14px 0; text-align: center; font-size: 0.95rem; font-weight: bold; cursor: pointer; border: none; outline: none; text-decoration: none; color: white; }
+        .btn-cart { background: linear-gradient(135deg, rgba(231, 76, 60, 0.95), rgba(192, 57, 43, 0.95)); border-right: 1px solid rgba(255,255,255,0.1); transform-origin: center center; }
+        .btn-line { background: linear-gradient(135deg, rgba(6, 199, 85, 0.95), rgba(0, 179, 74, 0.95)); display: flex; align-items: center; justify-content: center; }
         
-        @keyframes cartBounce { 0% { transform: scale(1); } 40% { transform: scale(1.15); } 70% { transform: scale(0.95); } 100% { transform: scale(1); } }
+        @keyframes cartBounce { 0% { transform: scale(1); } 40% { transform: scale(1.1); } 70% { transform: scale(0.95); } 100% { transform: scale(1); } }
         .bounce-anim { animation: cartBounce 0.4s ease-in-out; }
         
-        #btt-btn { position: fixed; bottom: 90px; right: 20px; width: 44px; height: 44px; border-radius: 50%; background: rgba(52, 152, 219, 0.9); color: white; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 999; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: 0.3s; backdrop-filter: blur(4px); font-size: 1.2rem; }
+        /* 🔥 D. 隱形深灰回頂按鈕 */
+        #btt-btn { position: fixed; bottom: 85px; right: 16px; width: 40px; height: 40px; border-radius: 50%; background: rgba(60, 60, 60, 0.75); color: #ddd; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 999; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: 0.3s; backdrop-filter: blur(6px); font-size: 1.1rem; }
         #btt-btn.show { opacity: 1; pointer-events: auto; }
         
+        /* 結帳確認彈窗 */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 10005; display: flex; justify-content: center; align-items: flex-end; opacity: 0; pointer-events: none; transition: 0.3s; }
         .modal-overlay.show { opacity: 1; pointer-events: auto; }
         .modal-content { font-family: 'Noto Sans TC', sans-serif; background: #222; width: 100%; max-width: 500px; border-radius: 20px 20px 0 0; padding: 24px; box-sizing: border-box; transform: translateY(100%); transition: 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); box-shadow: 0 -10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; max-height: 85vh; }
         .modal-overlay.show .modal-content { transform: translateY(0); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 16px; margin-bottom: 16px; }
-        .modal-header h2 { margin: 0; font-size: 1.3rem; color: #fff; font-weight: 700; }
+        .modal-header h2 { margin: 0; font-size: 1.2rem; color: #fff; font-weight: 700; }
         .close-btn { background: none; border: none; color: #888; font-size: 1.5rem; cursor: pointer; transition: 0.2s; }
         .close-btn:hover { color: #fff; }
         .modal-body { overflow-y: auto; flex-grow: 1; padding-right: 5px; }
         .modal-body::-webkit-scrollbar { width: 4px; }
-        .checkout-item { display: flex; justify-content: space-between; padding: 14px 0; border-bottom: 1px dashed #333; font-size: 1rem; color: #ddd; }
+        .checkout-item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px dashed #333; font-size: 0.95rem; color: #ddd; }
         .checkout-item-name { flex-grow: 1; padding-right: 15px; }
         .checkout-item-price { font-weight: bold; color: #ff6b6b; white-space: nowrap; }
-        .modal-footer { margin-top: 20px; padding-top: 16px; border-top: 1px solid #333; }
-        .modal-total { text-align: right; font-size: 1.5rem; color: #fff; font-weight: 900; margin-bottom: 16px; }
+        .modal-footer { margin-top: 16px; padding-top: 16px; border-top: 1px solid #333; }
+        .modal-total { text-align: right; font-size: 1.4rem; color: #fff; font-weight: 900; margin-bottom: 16px; }
         .modal-total .currency { color: #ff6b6b; }
-        .btn-confirm { width: 100%; background: #06C755; color: white; border: none; padding: 16px; border-radius: 12px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 15px rgba(6, 199, 85, 0.3); font-family: 'Noto Sans TC', sans-serif; }
-        .btn-confirm:hover { background: #05b04a; transform: translateY(-2px); }
+        .btn-confirm { width: 100%; background: #06C755; color: white; border: none; padding: 14px; border-radius: 12px; font-size: 1.05rem; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 15px rgba(6, 199, 85, 0.3); font-family: 'Noto Sans TC', sans-serif; }
 
+        /* 🖥️ 桌機版排版覆蓋 */
         @media (min-width: 768px) {
             body { padding-bottom: 0; }
+            .grid-container { grid-template-columns: repeat(3, 1fr); gap: 24px; padding: 24px; }
+            .card { padding: 18px; }
+            h3 { font-size: 1.05rem; margin-bottom: 10px; }
+            .price { font-size: 1.2rem; }
+            .new-price { font-size: 1.2rem; padding: 3px 8px; }
+            .old-price { font-size: 0.9rem; }
+            .desc { font-size: 0.9rem; -webkit-line-clamp: 3; margin-bottom: 12px; }
+            .condition-badge { font-size: 0.75rem; padding: 4px 10px; }
+            .thumb-dot { width: 24px; height: 24px; }
+            .btn-add { font-size: 1rem; padding: 12px; }
+            
             .filter-container { flex-direction: row; justify-content: space-between; } 
             .btn-group { width: auto; overflow: visible; padding: 0; }
-            .bottom-bar { bottom: 30px; right: 30px; left: auto; width: auto; flex-direction: column; gap: 15px; box-shadow: none; }
-            .bottom-btn { border-radius: 50px; padding: 14px 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border: none; flex: none; width: auto; }
-            .btn-cart { border-right: none; transform-origin: center center; }
-            #btt-btn { bottom: 110px; right: 35px; width: 50px; height: 50px; font-size: 1.5rem; }
-            #toast { bottom: 40px; } 
+            
+            /* 桌機版底部與按鈕復原 */
+            .bottom-bar { bottom: 30px; right: 30px; left: auto; transform: none; width: auto; flex-direction: column; gap: 15px; box-shadow: none; background: transparent; backdrop-filter: none; }
+            .bottom-btn { border-radius: 50px; padding: 14px 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border: none; flex: none; width: auto; font-size: 1.05rem; }
+            .btn-cart { border-right: none; background: #e74c3c; }
+            .btn-line { background: #06C755; }
+            
+            #btt-btn { bottom: 110px; right: 35px; width: 50px; height: 50px; font-size: 1.5rem; background: rgba(52, 152, 219, 0.9); border: none; }
+            #toast { bottom: 40px; font-size: 1rem; padding: 12px 24px; } 
+            
             .modal-overlay { align-items: center; }
             .modal-content { border-radius: 20px; transform: scale(0.9); }
             .modal-overlay.show .modal-content { transform: scale(1); }
+            .lb-nav { width: 50px; height: 50px; font-size: 2rem; }
+            #lb-close { width: 40px; height: 40px; font-size: 1.5rem; right: 20px; }
         }
+        @media (min-width: 1200px) { .grid-container { grid-template-columns: repeat(4, 1fr); gap: 28px; } }
     </style>
 </head><body>
-    <div class="top-nav">
+    <div class="top-nav" id="top-nav">
         <input type="text" id="searchInput" class="search-box" placeholder="🔍 搜尋商品或描述...">
         <div class="filter-container">
             <div class="btn-group">
@@ -467,14 +485,25 @@ $HtmlTemplate = @'
         let lbImages = [];
         let lbCurrentIdx = 0;
         
-        // 🔥 A. Spotlight 沉浸搜尋事件綁定
+        // Spotlight 搜尋特效 & 頂部導覽列智慧隱藏
+        let lastScrollY = window.scrollY;
+        const topNav = document.getElementById('top-nav');
+        
         document.getElementById('searchInput').addEventListener('focus', () => document.body.classList.add('search-focused'));
         document.getElementById('searchInput').addEventListener('blur', () => document.body.classList.remove('search-focused'));
         
         window.addEventListener('scroll', () => {
             const btt = document.getElementById('btt-btn');
-            if (window.scrollY > 400) btt.classList.add('show');
+            if (window.scrollY > 300) btt.classList.add('show');
             else btt.classList.remove('show');
+            
+            // 手機版往下捲動時隱藏導覽列
+            if (window.scrollY > 150 && window.scrollY > lastScrollY) {
+                topNav.style.transform = 'translateY(-100%)';
+            } else {
+                topNav.style.transform = 'translateY(0)';
+            }
+            lastScrollY = window.scrollY;
         });
 
         function renderGrid() {
@@ -516,7 +545,7 @@ $HtmlTemplate = @'
                 const priceHtml = item.sale_price 
                     ? `<span class="old-price"><span class="currency">NT$</span>${item.price}</span><span class="new-price">🔥 <span class="currency">NT$</span>${item.sale_price}</span>` 
                     : `<span class="price"><span class="currency">NT$</span>${item.price}</span>`;
-                const urlHtml = item.url ? `<a href="${item.url}" target="_blank" class="ref-link">🔗 原廠參考網址</a>` : '';
+                const urlHtml = item.url ? `<a href="${item.url}" target="_blank" class="ref-link">🔗 參考網址</a>` : '';
                 
                 let conditionBadge = '';
                 if (item.desc.includes('全新')) {
@@ -536,15 +565,16 @@ $HtmlTemplate = @'
                         </div>`;
                 }
 
-                // 🔥 B. 購買按鈕內建流光特效，已售出自動取消
+                // 手機版按鈕文字精簡化
+                let btnText = cart[item.name] ? '✅ 已加入' : '➕ 加入清單';
                 let btnHtml = item.is_sold 
                     ? `<button class="btn-add btn-sold" onclick="showToast('此商品已售出，下次請早！', '🚫')">🚫 已售出</button>`
-                    : `<button class="btn-add" onclick="toggleCart('${item.name.replace(/'/g, "\\'")}', ${item.num_price}, this)" style="background:${cart[item.name] ? '#e67e22' : '#3498db'}">${cart[item.name] ? '✅ 已加入購買清單' : '➕ 加入購買清單'}</button>`;
+                    : `<button class="btn-add" onclick="toggleCart('${item.name.replace(/'/g, "\\'")}', ${item.num_price}, this)" style="background:${cart[item.name] ? '#e67e22' : '#3498db'}">${btnText}</button>`;
 
                 card.innerHTML = `
                     <div class="img-wrapper">
                         <div class="main-img-container" onclick="openBox(${rawIdx})">
-                            <div class="sold-badge">已售出</div>
+                            <div class="sold-badge">售出</div>
                             <img class="main-img" id="main-img-${rawIdx}" src="${item.images[currentImgIdx]}" onload="this.classList.add('loaded')">
                         </div>
                         ${thumbHtml}
@@ -623,7 +653,6 @@ $HtmlTemplate = @'
             }
             
             let src = lbImages[lbCurrentIdx];
-            // 🔥 C. 更新劇院級背景 (極度模糊版)
             lbBg.style.backgroundImage = `url('${src}')`;
 
             let tmp = new Image();
@@ -650,7 +679,7 @@ $HtmlTemplate = @'
                 showToast('已從清單移除', '🗑️');
             } else { 
                 cart[name] = price; 
-                showToast('成功加入結帳清單', '✅');
+                showToast('成功加入清單', '✅');
             }
             renderGrid();
             
@@ -674,14 +703,12 @@ $HtmlTemplate = @'
             }
         }
 
-        // 🔥 D. 動態跳字計算特效 (Ease-out)
         function animateCounter(id, endVal, duration) {
             let obj = document.getElementById(id);
             let startTime = null;
             function step(currentTime) {
                 if (!startTime) startTime = currentTime;
                 let progress = Math.min((currentTime - startTime) / duration, 1);
-                // 使用 Cubic ease-out 讓數字越跑越慢，更有懸念感
                 let easeOut = 1 - Math.pow(1 - progress, 3); 
                 obj.innerText = Math.floor(easeOut * endVal).toLocaleString();
                 if (progress < 1) requestAnimationFrame(step);
@@ -706,7 +733,6 @@ $HtmlTemplate = @'
             document.getElementById('checkout-modal').classList.add('show');
             document.body.style.overflow = 'hidden'; 
             
-            // 🔥 觸發總金額動態跳字
             animateCounter('checkout-total', total, 800);
         }
 
@@ -763,7 +789,6 @@ $HtmlTemplate = @'
             });
         });
 
-        // 初始自動依照價格低到高排序
         renderGrid();
     </script>
 </body></html>
@@ -774,8 +799,8 @@ $FinalHtml = $HtmlTemplate.Replace('{{JSON}}', $JsonString).Replace('{{TITLE}}',
 
 try {
     Write-Host "開始上傳至 GitHub..." -ForegroundColor Cyan
-    git add . ; git commit -m "God Tier UI: Spotlight, Button Shine, Cinematic Lightbox, Counter Anim" ; git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 無懈可擊！4 大神級微互動已全數上線！", 64, "封神版發布")
+    git add . ; git commit -m "Mobile UX Overhaul: Dual Column, Hide Nav, Capsule Bottom Bar" ; git push origin main
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 無懈可擊！手機版專屬的旗艦級 UI/UX 已經重裝上陣！", 64, "手機版大升級")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 上傳 GitHub 失敗！", 48, "警告")
 }
