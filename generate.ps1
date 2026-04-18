@@ -246,7 +246,7 @@ foreach ($Item in $NewItems) {
 }
 $JsonString = $WebData | ConvertTo-Json -Depth 5 -Compress
 
-# 🔥 單引號保護的純淨 HTML/JS 模板 (移除了 html2canvas)
+# 🔥 單引號保護的純淨 HTML/JS 模板
 $HtmlTemplate = @'
 <!DOCTYPE html>
 <html lang="zh-TW"><head>
@@ -414,14 +414,15 @@ $HtmlTemplate = @'
             document.getElementById('cartBtn').innerText = '📝 結帳明細 (' + count + '件)';
         }
 
+        // 🔥 完美修復：官方帳號直通，不拔除 @
         function openLine() {
             let isDesktop = !/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             let rawId = "{{LINE_ID}}".trim();
             
             if (isDesktop && rawId !== "") {
-                let prefix = rawId.startsWith('@') ? '' : '~';
-                let cleanId = rawId.replace('@', '');
-                window.location.href = 'line://ti/p/' + prefix + cleanId;
+                // 如果是官方帳號，直接使用完整的 @ ID
+                let lineUrl = rawId.startsWith('@') ? 'line://ti/p/' + rawId : 'line://ti/p/~' + rawId;
+                window.location.href = lineUrl;
             } else {
                 window.location.href = '{{LINE_LINK}}';
             }
@@ -490,8 +491,8 @@ $FinalHtml = $HtmlTemplate.Replace('{{JSON}}', $JsonString).Replace('{{TITLE}}',
 
 try {
     Write-Host "開始上傳至 GitHub..." -ForegroundColor Cyan
-    git add . ; git commit -m "Revert to Text Copy Checkout" ; git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 更新完成！結帳已經改回純文字複製貼上了！", 64, "大功告成")
+    git add . ; git commit -m "Fix Line Official Account Bug" ; git push origin main
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 更新完成！LINE 官方帳號跳轉已完美修復！", 64, "大功告成")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 上傳 GitHub 失敗！", 48, "警告")
 }
