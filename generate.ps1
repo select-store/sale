@@ -451,12 +451,49 @@ $HtmlTemplate = @'
             #lb-close { width: 40px; height: 40px; font-size: 1.5rem; right: 20px; }
         }
         @media (min-width: 1200px) { .grid-container { grid-template-columns: repeat(4, 1fr); gap: 28px; } }
+
+        /* 🔥 新增：電腦版雙層導覽列專用樣式 (完全不影響原版設計) */
+        .desktop-filter-bar { display: none; }
+        .filter-label-text { color: #aaa; font-size: 0.95rem; font-weight: bold; white-space: nowrap; margin-right: 8px; }
+        .filter-group-wrap { display: flex; align-items: center; gap: 5px; }
+
+        @media (min-width: 900px) {
+            .btn-open-filter { display: none !important; }
+            .desktop-filter-bar { 
+                display: flex; 
+                justify-content: space-between; 
+                align-items: center; 
+                margin-top: 16px; 
+                padding-top: 16px; 
+                border-top: 1px solid rgba(255,255,255,0.08); 
+            }
+            .top-nav { padding: 16px 24px; }
+        }
     </style>
 </head><body>
     <div class="top-nav" id="top-nav">
         <div class="search-row">
             <input type="text" id="searchInput" class="search-box" placeholder="🔍 搜尋商品或描述...">
             <button class="btn-open-filter" onclick="openFilterDrawer()">⚙️ 篩選</button>
+        </div>
+        <div class="desktop-filter-bar">
+            <div class="filter-group-wrap">
+                <span class="filter-label-text">標籤篩選：</span>
+                <div class="btn-group">
+                    <button class="filter-btn active" data-tag="all">全部</button>
+                    <button class="filter-btn" data-tag="未售出">#未售出</button>
+                    <button class="filter-btn" data-tag="已售出">#已售出</button>
+                    <button class="filter-btn" data-tag="全新">#全新</button>
+                    <button class="filter-btn" data-tag="二手">#二手</button>
+                </div>
+            </div>
+            <div class="filter-group-wrap">
+                <span class="filter-label-text">排序方式：</span>
+                <div class="btn-group">
+                    <button class="sort-btn active" data-sort="asc">價格低到高 ⭡</button>
+                    <button class="sort-btn" data-sort="desc">價格高到低 ⭣</button>
+                </div>
+            </div>
         </div>
     </div>
     
@@ -662,7 +699,8 @@ $HtmlTemplate = @'
             document.getElementById('searchInput').value = '';
             activeFilters.clear();
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            document.querySelector('[data-tag="all"]').classList.add('active');
+            // 🔥 確保所有「全部」按鈕都亮起
+            document.querySelectorAll('.filter-btn[data-tag="all"]').forEach(b => b.classList.add('active'));
             renderGrid();
         }
 
@@ -835,20 +873,36 @@ $HtmlTemplate = @'
         
         document.getElementById('searchInput').addEventListener('input', renderGrid);
         
+        // 🔥 確保點擊任一按鈕時，上下兩個地方的標籤狀態會同步
         document.querySelectorAll('.filter-btn').forEach(btn => { 
             btn.addEventListener('click', function() { 
                 const tag = this.dataset.tag; 
-                if (tag === 'all') { activeFilters.clear(); document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); this.classList.add('active'); } 
-                else { document.querySelector('[data-tag="all"]').classList.remove('active'); if (activeFilters.has(tag)) { activeFilters.delete(tag); this.classList.remove('active'); } else { activeFilters.add(tag); this.classList.add('active'); } } 
+                if (tag === 'all') { 
+                    activeFilters.clear(); 
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); 
+                    document.querySelectorAll('.filter-btn[data-tag="all"]').forEach(b => b.classList.add('active')); 
+                } 
+                else { 
+                    document.querySelectorAll('.filter-btn[data-tag="all"]').forEach(b => b.classList.remove('active')); 
+                    if (activeFilters.has(tag)) { 
+                        activeFilters.delete(tag); 
+                        document.querySelectorAll('.filter-btn[data-tag="' + tag + '"]').forEach(b => b.classList.remove('active')); 
+                    } else { 
+                        activeFilters.add(tag); 
+                        document.querySelectorAll('.filter-btn[data-tag="' + tag + '"]').forEach(b => b.classList.add('active')); 
+                    } 
+                } 
                 renderGrid(); 
             }); 
         });
 
+        // 🔥 確保點擊排序按鈕時，狀態也會同步
         document.querySelectorAll('.sort-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                activeSort = this.dataset.sort;
+                const sortVal = this.dataset.sort;
+                document.querySelectorAll('.sort-btn[data-sort="' + sortVal + '"]').forEach(b => b.classList.add('active'));
+                activeSort = sortVal;
                 renderGrid();
             });
         });
