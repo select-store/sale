@@ -270,7 +270,7 @@ foreach ($Item in $NewItems) {
 }
 $JsonString = $WebData | ConvertTo-Json -Depth 5 -Compress
 
-# 🔥 純淨 HTML/JS 模板 (雙層導覽旗艦版)
+# 🔥 純淨 HTML/JS 模板 (霸氣單欄 + 底部篩選抽屜)
 $HtmlTemplate = @'
 <!DOCTYPE html>
 <html lang="zh-TW"><head>
@@ -285,115 +285,190 @@ $HtmlTemplate = @'
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #555; }
         
-        /* 🔥 A. 頂部豪華雙層設計 */
+        /* 🔥 A. 頂部極簡化設計 (釋放手機空間) */
         .top-nav { background: rgba(26, 26, 26, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 12px 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
-        .nav-container { max-width: 1400px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
-        
-        /* 第一層：搜尋 */
-        .search-row { display: flex; gap: 12px; align-items: center; width: 100%; }
-        .search-box { flex: 1; min-width: 0; margin: 0; padding: 12px 20px; border: 1px solid #444; border-radius: 25px; background: rgba(36, 36, 36, 0.9); color: #fff; box-sizing: border-box; font-size: 1rem; outline: none; transition: 0.3s; font-family: 'Noto Sans TC', sans-serif; }
+        .search-row { display: flex; gap: 12px; align-items: center; max-width: 1400px; margin: 0 auto; }
+        .search-box { flex: 1; min-width: 0; margin: 0; padding: 12px 16px; border: 1px solid #444; border-radius: 25px; background: rgba(36, 36, 36, 0.9); color: #fff; box-sizing: border-box; font-size: 1rem; outline: none; transition: 0.3s; font-family: 'Noto Sans TC', sans-serif; }
         .search-box:focus { border-color: #3498db; background: #222; }
         
-        /* 手機版篩選按鈕 (電腦版會隱藏) */
-        .btn-open-filter { flex-shrink: 0; background: #2a2a2a; color: #eee; border: 1px solid #555; border-radius: 25px; padding: 12px 20px; font-size: 0.95rem; cursor: pointer; font-family: 'Noto Sans TC', sans-serif; font-weight: bold; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
+        .btn-open-filter { flex-shrink: 0; white-space: nowrap; background: #2a2a2a; color: #eee; border: 1px solid #555; border-radius: 25px; padding: 12px 16px; font-size: 0.95rem; cursor: pointer; font-family: 'Noto Sans TC', sans-serif; font-weight: bold; transition: 0.2s; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        .btn-open-filter:hover { background: #333; border-color: #777; }
+        .btn-open-filter:active { transform: scale(0.95); }
         
-        /* 第二層：電腦版專用篩選列 (手機隱藏) */
-        .desktop-filter-bar { display: none; align-items: center; justify-content: space-between; gap: 20px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px; }
-        .filter-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-        .filter-label { font-size: 0.85rem; color: #888; font-weight: bold; margin-right: 4px; }
-        
-        /* 標籤按鈕樣式 */
-        .filter-btn, .sort-btn { background: rgba(42, 42, 42, 0.8); border: 1px solid #444; padding: 8px 16px; border-radius: 20px; cursor: pointer; color: #ccc; font-size: 0.9rem; transition: 0.2s; font-family: 'Noto Sans TC', sans-serif; }
-        .filter-btn:hover, .sort-btn:hover { background: #333; border-color: #666; }
-        .filter-btn.active { background: #3498db; color: white; border-color: #3498db; font-weight: bold; }
-        .sort-btn.active { background: #e67e22; color: white; border-color: #e67e22; font-weight: bold; }
-
-        /* 🔥 B. 底部篩選抽屜 (手機版保留) */
+        /* 🔥 A. 底部篩選抽屜 (Filter Drawer) */
         #filter-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 10002; opacity: 0; pointer-events: none; transition: 0.3s; }
         #filter-overlay.show { opacity: 1; pointer-events: auto; }
-        #filter-drawer { position: fixed; bottom: 0; left: 0; width: 100%; background: #1e1e24; border-radius: 24px 24px 0 0; z-index: 10003; transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); padding: 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px; }
+        
+        #filter-drawer { position: fixed; bottom: 0; left: 0; width: 100%; background: #1e1e24; border-radius: 24px 24px 0 0; z-index: 10003; transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); box-shadow: 0 -10px 30px rgba(0,0,0,0.6); padding: 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px; max-height: 85vh; overflow-y: auto; }
         #filter-drawer.show { transform: translateY(0); }
-        .drawer-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #444; padding-bottom: 16px; }
-        .drawer-close { background: rgba(255,255,255,0.1); border: none; color: #fff; width: 36px; height: 36px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; }
-
-        /* 商品網格 */
-        .grid-container { display: grid; grid-template-columns: 1fr; gap: 24px; padding: 16px; max-width: 1400px; margin: 0 auto; min-height: 400px; }
-        .card { background: #1e1e24; display: flex; flex-direction: column; border-radius: 16px; border: 1px solid #2a2a2a; overflow: hidden; padding: 18px; position: relative; transition: 0.3s; }
-        .card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.5); }
         
-        /* 圖片與標籤 */
-        .img-wrapper { width: 100%; position: relative; display: flex; justify-content: center; margin-bottom: 16px; }
+        .drawer-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #444; padding-bottom: 16px; margin-bottom: 8px; }
+        .drawer-header h3 { margin: 0; font-size: 1.25rem; color: #fff; font-weight: 900; }
+        .drawer-close { background: rgba(255,255,255,0.1); border: none; color: #fff; width: 36px; height: 36px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; }
+        .drawer-close:hover { background: rgba(255,255,255,0.2); }
+        
+        .filter-section-title { font-size: 0.95rem; color: #aaa; margin-bottom: 12px; font-weight: bold; letter-spacing: 1px; }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+        .filter-btn, .sort-btn { background: rgba(42, 42, 42, 0.8); border: 1px solid #555; padding: 10px 18px; border-radius: 20px; cursor: pointer; color: #ccc; font-size: 1rem; transition: 0.2s; font-family: 'Noto Sans TC', sans-serif; font-weight: 500; }
+        .filter-btn.active { background: #3498db; color: white; border-color: #3498db; font-weight: bold; box-shadow: 0 4px 12px rgba(52,152,219,0.3); }
+        .sort-btn { background: rgba(44, 62, 80, 0.8); border-color: #34495e; }
+        .sort-btn.active { background: #e67e22; color: white; border-color: #e67e22; font-weight: bold; box-shadow: 0 4px 12px rgba(230,126,34,0.3); }
+        
+        .btn-confirm-filter { background: #06C755; color: white; border: none; border-radius: 12px; padding: 16px; font-size: 1.15rem; font-weight: bold; cursor: pointer; margin-top: 10px; font-family: 'Noto Sans TC', sans-serif; box-shadow: 0 4px 15px rgba(6,199,85,0.3); transition: 0.2s; }
+        .btn-confirm-filter:active { transform: scale(0.98); }
+
+        /* 🔥 B. 霸氣單欄滿版網格 (手機版 1 欄) - 保留設定 */
+        .grid-container { display: grid; grid-template-columns: 1fr; gap: 24px; padding: 16px; max-width: 1400px; margin: 0 auto; min-height: 400px; transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        body.search-focused .grid-container { filter: blur(5px) brightness(0.4); pointer-events: none; transform: scale(0.98); }
+        
+        .empty-state { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 10px; text-align: center; color: #888; animation: cardEnter 0.5s ease both; }
+        .empty-state-icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.6; }
+        .empty-state h2 { font-size: 1.2rem; color: #ddd; margin: 0 0 8px; }
+        .empty-state p { margin: 0 0 20px; font-size: 0.9rem; }
+        .btn-reset { background: #3498db; color: #fff; border: none; padding: 10px 24px; border-radius: 24px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: 0.2s; box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3); font-family: 'Noto Sans TC', sans-serif; }
+
+        /* 卡片設計 - 單欄大空間 */
+        .card { background: #1e1e24; display: flex; flex-direction: column; height: 100%; border-radius: 16px; border: 1px solid #2a2a2a; box-sizing: border-box; overflow: hidden; transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s; padding: 18px; animation: cardEnter 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; position: relative; }
+        .card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.08); }
+        @keyframes cardEnter { from { opacity: 0; transform: translateY(30px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        
+        .card.pinned { border-color: rgba(238, 130, 238, 0.5); box-shadow: 0 4px 20px rgba(238, 130, 238, 0.08); }
+        .card.pinned:hover { box-shadow: 0 12px 32px rgba(238, 130, 238, 0.2), inset 0 0 0 1px rgba(238, 130, 238, 0.6); }
+        
+        .img-wrapper { width: 100%; position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 16px; }
         .main-img-container { width: 100%; max-width: 350px; aspect-ratio: 1/1; position: relative; border-radius: 12px; cursor: zoom-in; background: #1a1a1a; }
-        .main-img { width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity 0.4s; }
+        .main-img { width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity 0.4s ease-in-out; }
         .main-img.loaded { opacity: 1; }
-        .status-row { display: flex; gap: 8px; margin-bottom: 10px; }
-        .pin-badge { padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 0.85rem; border: 1px solid #EE82EE; color: #EE82EE; background: rgba(238, 130, 238, 0.1); }
-        .condition-badge { padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; border: 1px solid #555; }
-        .badge-new { color: #e67e22; border-color: rgba(230, 126, 34, 0.4); }
-
-        /* 價格與資訊 */
-        h3 { margin: 0 0 10px 0; font-size: 1.25rem; color: #fff; line-height: 1.4; }
-        .price-container { margin-bottom: 12px; display: flex; align-items: baseline; gap: 8px; }
-        .price { color: #ff6b6b; font-weight: 900; font-size: 1.4rem; }
-        .old-price { color: #888; text-decoration: line-through; font-size: 1rem; }
-        .new-price { color: #ff6b6b; font-weight: 900; font-size: 1.4rem; background: rgba(255, 107, 107, 0.15); padding: 4px 8px; border-radius: 6px; }
-        .desc { font-size: 1rem; color: #aaa; margin: 0 0 16px 0; white-space: pre-line; }
-
-        /* 按鈕與小撇步 */
-        .btn-add { background: #3498db; color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
-        .btn-sold { background: #444 !important; color: #aaa !important; cursor: not-allowed; }
-
-        /* 🖥️ 桌機大改造 (重點在此！) */
-        @media (min-width: 900px) {
-            .btn-open-filter { display: none; } /* 隱藏手機抽屜按鈕 */
-            .desktop-filter-bar { display: flex; } /* 顯示雙層導覽列 */
-            .top-nav { padding: 16px 24px; }
-            .grid-container { grid-template-columns: repeat(3, 1fr); padding: 24px; }
-            body { padding-bottom: 0; }
-            
-            /* 底部導覽列改到右下角 */
-            .bottom-bar { position: fixed; bottom: 30px; right: 30px; left: auto; transform: none; width: auto; flex-direction: column; gap: 15px; background: transparent; backdrop-filter: none; }
-            .bottom-btn { border-radius: 50px; padding: 14px 24px; width: 220px; box-shadow: 0 8px 20px rgba(0,0,0,0.5); }
-        }
-        @media (min-width: 1200px) { .grid-container { grid-template-columns: repeat(4, 1fr); } }
         
-        /* 雜項：Toast & Lightbox */
-        #toast { visibility: hidden; position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(30,30,30,0.9); padding: 12px 24px; border-radius: 30px; z-index: 10000; transition: 0.3s; opacity: 0; border: 1px solid #444; }
-        #toast.show { visibility: visible; opacity: 1; transform: translate(-50%, -20px); }
-        #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; justify-content: center; align-items: center; }
-        #lightbox img { max-width: 90%; max-height: 85vh; object-fit: contain; }
+        /* 狀態膠囊 - 紫色線框風格，字體放大 */
+        .status-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; } 
+        .pin-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.5px; border: 1px solid #EE82EE; color: #EE82EE; background: rgba(238, 130, 238, 0.1); }
+        .pin-badge i { font-style: normal; color: #EE82EE; } 
+
+        .condition-badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px; }
+        .badge-new { background: rgba(230, 126, 34, 0.15); color: #e67e22; border: 1px solid rgba(230, 126, 34, 0.4); }
+        .badge-used { background: rgba(255, 255, 255, 0.08); color: #cccccc; border: 1px solid rgba(255, 255, 255, 0.2); }
+
+        .thumb-overlay-container { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 90%; display: flex; justify-content: center; z-index: 10; }
+        .thumb-scroll-area { display: flex; gap: 6px; background: rgba(20, 20, 20, 0.65); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 6px 12px; border-radius: 20px; align-items: center; border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.5); overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; scroll-behavior: smooth; }
+        .thumb-dot { flex-shrink: 0; width: 26px; height: 26px; background-size: cover; background-position: center; border-radius: 50%; cursor: pointer; filter: brightness(0.6) saturate(0.7); border: 2px solid transparent; transition: all 0.3s; background-color: #111; }
+        .thumb-dot:hover { transform: scale(1.3); filter: brightness(1) saturate(1); z-index: 2; }
+        .thumb-dot.active { filter: brightness(1) saturate(1); border-color: rgba(255, 255, 255, 0.9); box-shadow: 0 0 8px rgba(255, 255, 255, 0.4); transform: scale(1.15); }
+        .thumb-scroll-area:hover .thumb-dot.active:not(:hover) { transform: scale(1); box-shadow: none; border-color: rgba(255, 255, 255, 0.4); }
+        
+        .sold-badge { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-10deg); background: rgba(231, 76, 60, 0.95); color: white; padding: 10px 24px; font-weight: 900; font-size: 1.2rem; border-radius: 8px; z-index: 15; border: 3px solid white; letter-spacing: 2px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .sold-out .sold-badge { display: block; }
+        .sold-out .main-img { filter: grayscale(100%); opacity: 0.4; }
+        
+        /* 🔥 B. 解除行數封印，字體放大 */
+        .info { flex-grow: 1; display: flex; flex-direction: column; padding: 0 0 12px 0; }
+        h3 { margin: 0 0 10px 0; font-size: 1.25rem; color: #fff; line-height: 1.4; font-weight: 700; display: block; word-break: break-word; }
+        
+        .price-container { margin-bottom: 12px; display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; font-family: 'Noto Sans TC', sans-serif; }
+        .currency { font-size: 0.7em; font-weight: 500; margin-right: 2px; }
+        .price { color: #ff6b6b; font-weight: 900; font-size: 1.4rem; }
+        .old-price { color: #888; text-decoration: line-through; font-size: 1rem; font-weight: 500; }
+        .new-price { color: #ff6b6b; font-weight: 900; font-size: 1.4rem; background: rgba(255, 107, 107, 0.15); padding: 4px 8px; border-radius: 6px; }
+        
+        .desc { font-size: 1rem; color: #aaa; margin: 0 0 16px 0; line-height: 1.6; display: block; white-space: pre-line; word-break: break-word; }
+        .ref-link { font-size: 0.95rem; color: #3498db; text-decoration: none; font-weight: 600; margin-top: auto; display: inline-block; padding-top: 10px; border-top: 1px dashed #444; }
+        
+        .card-actions { margin-top: auto; }
+        .btn-add { font-family: 'Noto Sans TC', sans-serif; background: #3498db; color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1.1rem; width: 100%; transition: background 0.2s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 6px; position: relative; overflow: hidden; letter-spacing: 1px; }
+        .btn-add::after { content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(to right, transparent, rgba(255,255,255,0.4), transparent); transform: skewX(-20deg); animation: shineSweep 3s infinite ease-in-out; }
+        @keyframes shineSweep { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
+        .btn-add:active { transform: scale(0.96); }
+        .btn-sold { background: #444 !important; color: #aaa !important; pointer-events: none; }
+        .btn-sold::after { display: none; } 
+        
+        /* 劇院相簿與雜項 */
+        #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; overflow: hidden; }
+        #lb-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center; filter: blur(40px) brightness(0.4); z-index: -1; transform: scale(1.1); transition: background-image 0.4s ease-in-out; }
+        #lightbox img { max-width: 90%; max-height: 85vh; object-fit: contain; z-index: 1; box-shadow: 0 10px 40px rgba(0,0,0,0.6); border-radius: 8px; }
+        
+        #lb-counter { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); color: white; font-size: 1rem; font-weight: bold; background: rgba(0,0,0,0.6); padding: 4px 16px; border-radius: 20px; z-index: 10001; letter-spacing: 1px; backdrop-filter: blur(4px); }
+        .lb-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.1); color: white; border: none; font-size: 1.5rem; width: 40px; height: 40px; display: flex; justify-content: center; align-items: center; cursor: pointer; border-radius: 50%; z-index: 10001; transition: 0.3s; backdrop-filter: blur(4px); }
+        #lb-prev { left: 10px; }
+        #lb-next { right: 10px; }
+        #lb-close { position: absolute; top: 20px; right: 15px; background: rgba(255,255,255,0.1); width: 36px; height: 36px; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: white; border: none; font-size: 1.2rem; cursor: pointer; z-index: 10001; backdrop-filter: blur(4px); }
+
+        #toast { visibility: hidden; min-width: auto; background: rgba(30, 30, 30, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: #fff; text-align: center; border-radius: 30px; padding: 12px 24px; position: fixed; z-index: 10000; left: 50%; bottom: 100px; font-size: 1.05rem; transform: translate(-50%, 20px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); font-weight: bold; border: 1px solid rgba(255,255,255,0.1); pointer-events: none; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+        #toast.show { visibility: visible; opacity: 1; transform: translate(-50%, 0); }
+        
+        .bottom-bar { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: calc(100% - 32px); max-width: 400px; display: flex; z-index: 1000; box-shadow: 0 10px 25px rgba(0,0,0,0.5); pointer-events: auto; border-radius: 30px; overflow: hidden; background: rgba(30,30,30,0.8); backdrop-filter: blur(10px); }
+        .bottom-btn { font-family: 'Noto Sans TC', sans-serif; flex: 1; padding: 16px 0; text-align: center; font-size: 1.05rem; font-weight: bold; cursor: pointer; border: none; outline: none; text-decoration: none; color: white; }
+        .btn-cart { background: linear-gradient(135deg, rgba(231, 76, 60, 0.95), rgba(192, 57, 43, 0.95)); border-right: 1px solid rgba(255,255,255,0.1); transform-origin: center center; }
+        .btn-line { background: linear-gradient(135deg, rgba(6, 199, 85, 0.95), rgba(0, 179, 74, 0.95)); display: flex; align-items: center; justify-content: center; }
+        
+        @keyframes cartBounce { 0% { transform: scale(1); } 40% { transform: scale(1.1); } 70% { transform: scale(0.95); } 100% { transform: scale(1); } }
+        .bounce-anim { animation: cartBounce 0.4s ease-in-out; }
+        
+        #btt-btn { position: fixed; bottom: 85px; right: 16px; width: 46px; height: 46px; border-radius: 50%; background: rgba(60, 60, 60, 0.75); color: #ddd; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 999; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: 0.3s; backdrop-filter: blur(6px); font-size: 1.3rem; }
+        #btt-btn.show { opacity: 1; pointer-events: auto; }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 10005; display: flex; justify-content: center; align-items: flex-end; opacity: 0; pointer-events: none; transition: 0.3s; }
+        .modal-overlay.show { opacity: 1; pointer-events: auto; }
+        .modal-content { font-family: 'Noto Sans TC', sans-serif; background: #222; width: 100%; max-width: 500px; border-radius: 20px 20px 0 0; padding: 24px; box-sizing: border-box; transform: translateY(100%); transition: 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); box-shadow: 0 -10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; max-height: 85vh; }
+        .modal-overlay.show .modal-content { transform: translateY(0); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 16px; margin-bottom: 16px; }
+        .modal-header h2 { margin: 0; font-size: 1.3rem; color: #fff; font-weight: 700; }
+        .close-btn { background: none; border: none; color: #888; font-size: 1.5rem; cursor: pointer; transition: 0.2s; }
+        .close-btn:hover { color: #fff; }
+        .modal-body { overflow-y: auto; flex-grow: 1; padding-right: 5px; }
+        .modal-body::-webkit-scrollbar { width: 4px; }
+        .checkout-item { display: flex; justify-content: space-between; padding: 14px 0; border-bottom: 1px dashed #333; font-size: 1.05rem; color: #ddd; }
+        .checkout-item-name { flex-grow: 1; padding-right: 15px; }
+        .checkout-item-price { font-weight: bold; color: #ff6b6b; white-space: nowrap; }
+        .modal-footer { margin-top: 16px; padding-top: 16px; border-top: 1px solid #333; }
+        .modal-total { text-align: right; font-size: 1.6rem; color: #fff; font-weight: 900; margin-bottom: 16px; }
+        .modal-total .currency { color: #ff6b6b; }
+        .btn-confirm { width: 100%; background: #06C755; color: white; border: none; padding: 16px; border-radius: 12px; font-size: 1.15rem; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 15px rgba(6, 199, 85, 0.3); font-family: 'Noto Sans TC', sans-serif; }
+
+        /* 🖥️ 桌機版排版覆蓋 (支援桌機版置中抽屜) */
+        @media (min-width: 600px) {
+            .grid-container { grid-template-columns: repeat(2, 1fr); padding: 24px; }
+        }
+        @media (min-width: 900px) {
+            body { padding-bottom: 0; }
+            .grid-container { grid-template-columns: repeat(3, 1fr); }
+            
+            /* 桌機版抽屜變形為 Modal */
+            #filter-drawer { max-width: 500px; left: 50%; bottom: auto; top: 50%; transform: translate(-50%, -50%) scale(0.9); opacity: 0; pointer-events: none; border-radius: 20px; }
+            #filter-drawer.show { transform: translate(-50%, -50%) scale(1); opacity: 1; pointer-events: auto; }
+            
+            .bottom-bar { bottom: 30px; right: 30px; left: auto; transform: none; width: auto; flex-direction: column; gap: 15px; box-shadow: none; background: transparent; backdrop-filter: none; }
+            .bottom-btn { border-radius: 50px; padding: 14px 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border: none; flex: none; width: auto; font-size: 1.05rem; }
+            .btn-cart { border-right: none; background: #e74c3c; }
+            .btn-line { background: #06C755; }
+            
+            #btt-btn { bottom: 110px; right: 35px; width: 50px; height: 50px; font-size: 1.5rem; background: rgba(52, 152, 219, 0.9); border: none; }
+            #toast { bottom: 40px; font-size: 1.1rem; padding: 14px 28px; } 
+            
+            .modal-overlay { align-items: center; }
+            .modal-content { border-radius: 20px; transform: scale(0.9); }
+            .modal-overlay.show .modal-content { transform: scale(1); }
+            .lb-nav { width: 50px; height: 50px; font-size: 2rem; }
+            #lb-close { width: 40px; height: 40px; font-size: 1.5rem; right: 20px; }
+        }
+        @media (min-width: 1200px) { .grid-container { grid-template-columns: repeat(4, 1fr); gap: 28px; } }
     </style>
 </head><body>
     <div class="top-nav" id="top-nav">
-        <div class="nav-container">
-            <div class="search-row">
-                <input type="text" id="searchInput" class="search-box" placeholder="🔍 搜尋商品或描述...">
-                <button class="btn-open-filter" onclick="openFilterDrawer()">⚙️ 篩選</button>
-            </div>
-            <div class="desktop-filter-bar">
-                <div class="filter-group">
-                    <span class="filter-label">標籤：</span>
-                    <button class="filter-btn active" data-tag="all">全部</button>
-                    <button class="filter-btn" data-tag="未售出">#未售出</button>
-                    <button class="filter-btn" data-tag="已售出">#已售出</button>
-                    <button class="filter-btn" data-tag="全新">#全新</button>
-                    <button class="filter-btn" data-tag="二手">#二手</button>
-                </div>
-                <div class="filter-group">
-                    <span class="filter-label">排序：</span>
-                    <button class="sort-btn active" data-sort="asc">價格低到高 ⭡</button>
-                    <button class="sort-btn" data-sort="desc">價格高到低 ⭣</button>
-                </div>
-            </div>
+        <div class="search-row">
+            <input type="text" id="searchInput" class="search-box" placeholder="🔍 搜尋商品或描述...">
+            <button class="btn-open-filter" onclick="openFilterDrawer()">⚙️ 篩選</button>
         </div>
     </div>
     
     <div id="filter-overlay" onclick="closeFilterDrawer()"></div>
     <div id="filter-drawer">
-        <div class="drawer-header"><h3>⚙️ 篩選與排序</h3><button class="drawer-close" onclick="closeFilterDrawer()">✕</button></div>
-        <div style="padding:10px 0">
-            <div class="filter-label">標籤篩選</div>
-            <div class="filter-group" style="margin-top:10px">
+        <div class="drawer-header">
+            <h3>⚙️ 篩選與排序</h3>
+            <button class="drawer-close" onclick="closeFilterDrawer()">✕</button>
+        </div>
+        <div>
+            <div class="filter-section-title">標籤篩選</div>
+            <div class="btn-group">
                 <button class="filter-btn active" data-tag="all">全部</button>
                 <button class="filter-btn" data-tag="未售出">#未售出</button>
                 <button class="filter-btn" data-tag="已售出">#已售出</button>
@@ -401,17 +476,49 @@ $HtmlTemplate = @'
                 <button class="filter-btn" data-tag="二手">#二手</button>
             </div>
         </div>
-        <button class="btn-add" style="margin-top:20px" onclick="closeFilterDrawer()">查看結果</button>
+        <div>
+            <div class="filter-section-title">排序方式</div>
+            <div class="btn-group">
+                <button class="sort-btn active" data-sort="asc">價格低到高 ⭡</button>
+                <button class="sort-btn" data-sort="desc">價格高到低 ⭣</button>
+            </div>
+        </div>
+        <button class="btn-confirm-filter" onclick="closeFilterDrawer()">查看結果</button>
     </div>
     
     <div class="grid-container" id="productGrid"></div>
     
     <div class="bottom-bar">
-        <button id="cartBtn" class="btn-add" style="background:#e74c3c" onclick="openCheckoutModal()">📝 結帳明細 (0件)</button>
-        <button class="btn-add" style="background:#06C755" onclick="openLine()">💬 聯絡老闆 (LINE)</button>
+        <button id="cartBtn" class="bottom-btn btn-cart" onclick="openCheckoutModal()">📝 結帳明細 (0件)</button>
+        <a href="javascript:void(0)" onclick="openLine()" class="bottom-btn btn-line">💬 聯絡老闆 (LINE)</a>
     </div>
 
-    <div id="lightbox" onclick="this.style.display='none'"><img id="box-img"></div>
+    <button id="btt-btn" onclick="window.scrollTo({top:0, behavior:'smooth'})">↑</button>
+
+    <div id="checkout-modal" class="modal-overlay" onclick="closeCheckoutModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2>📝 確認結帳清單</h2>
+                <button class="close-btn" onclick="closeCheckoutModal()">✕</button>
+            </div>
+            <div class="modal-body" id="checkout-list"></div>
+            <div class="modal-footer">
+                <div class="modal-total">總計：<span class="currency">NT$</span> <span id="checkout-total">0</span></div>
+                <button class="btn-confirm" onclick="confirmAndCopy()">🚀 一鍵複製並聯絡老闆</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="lightbox" onclick="closeBox(event)">
+        <div id="lb-bg"></div>
+        <div id="lb-counter" style="display:none;">1 / 3</div>
+        <button id="lb-close" onclick="closeBox(event)">✕</button>
+        <button id="lb-prev" class="lb-nav" onclick="lbNav(event, -1)" style="display:none;">❮</button>
+        <div id="loading-text" style="color:white;font-weight:bold;font-size:1.2rem;display:none;">🔄 載入中...</div>
+        <img id="box-img">
+        <button id="lb-next" class="lb-nav" onclick="lbNav(event, 1)" style="display:none;">❯</button>
+    </div>
+    
     <div id="toast"></div>
 
     <script>
@@ -419,101 +526,333 @@ $HtmlTemplate = @'
         let cart = {};
         let activeFilters = new Set();
         let activeSort = 'asc'; 
+        let cardImgState = {};  
+        let lbImages = [];
+        let lbCurrentIdx = 0;
         
-        // 搜尋與篩選邏輯
+        let lastScrollY = window.scrollY;
+        const topNav = document.getElementById('top-nav');
+        
+        document.getElementById('searchInput').addEventListener('focus', () => document.body.classList.add('search-focused'));
+        document.getElementById('searchInput').addEventListener('blur', () => document.body.classList.remove('search-focused'));
+        
+        window.addEventListener('scroll', () => {
+            const btt = document.getElementById('btt-btn');
+            if (window.scrollY > 300) btt.classList.add('show');
+            else btt.classList.remove('show');
+            
+            if (window.scrollY > 150 && window.scrollY > lastScrollY) {
+                topNav.style.transform = 'translateY(-100%)';
+            } else {
+                topNav.style.transform = 'translateY(0)';
+            }
+            lastScrollY = window.scrollY;
+        });
+
+        // 🔥 A. 抽屜控制 JS
+        window.openFilterDrawer = function() {
+            document.getElementById('filter-drawer').classList.add('show');
+            document.getElementById('filter-overlay').classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+        window.closeFilterDrawer = function() {
+            document.getElementById('filter-drawer').classList.remove('show');
+            document.getElementById('filter-overlay').classList.remove('show');
+            document.body.style.overflow = '';
+        }
+
         function renderGrid() {
             const grid = document.getElementById('productGrid');
             grid.innerHTML = '';
-            const search = document.getElementById('searchInput').value.toLowerCase();
             
-            let filtered = RAW_DATA.filter(item => {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            let filtered = [...RAW_DATA].filter(item => {
                 const tags = (item.is_sold ? "已售出" : "未售出") + " " + item.desc + " " + item.name;
                 const matchSearch = tags.toLowerCase().includes(search);
-                const matchTag = activeFilters.size === 0 || Array.from(activeFilters).every(f => tags.includes(f));
+                const matchTag = activeFilters.size === 0 || Array.from(activeFilters).every(f => tags.toLowerCase().includes(f.toLowerCase()));
                 return matchSearch && matchTag;
             });
             
             filtered.sort((a, b) => {
-                if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
-                return activeSort === 'asc' ? a.num_price - b.num_price : b.num_price - a.num_price;
+                if (a.is_pinned !== b.is_pinned) {
+                    return a.is_pinned ? -1 : 1; 
+                }
+                if (activeSort === 'asc') return a.num_price - b.num_price;
+                if (activeSort === 'desc') return b.num_price - a.num_price;
+                return 0;
             });
 
-            filtered.forEach((item, idx) => {
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📦</div>
+                        <h2>Oops！找不到商品</h2>
+                        <p>試試看其他關鍵字，或是換個篩選條件吧！</p>
+                        <button class="btn-reset" onclick="resetFilters(); closeFilterDrawer();">清除所有篩選</button>
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach((item, renderIndex) => {
+                const rawIdx = RAW_DATA.indexOf(item); 
+                if(cardImgState[rawIdx] === undefined) cardImgState[rawIdx] = 0; 
+                let currentImgIdx = cardImgState[rawIdx];
+
                 const card = document.createElement('div');
                 card.className = 'card';
                 if (item.is_sold) card.classList.add('sold-out');
+                if (item.is_pinned) card.classList.add('pinned');
+                card.style.animationDelay = `${Math.min(renderIndex * 0.05, 0.4)}s`;
                 
                 const priceHtml = item.sale_price 
-                    ? `<span class="old-price">NT$${item.price}</span><span class="new-price">🔥 NT$${item.sale_price}</span>` 
-                    : `<span class="price">NT$${item.price}</span>`;
+                    ? `<span class="old-price"><span class="currency">NT$</span>${item.price}</span><span class="new-price">🔥 <span class="currency">NT$</span>${item.sale_price}</span>` 
+                    : `<span class="price"><span class="currency">NT$</span>${item.price}</span>`;
+                const urlHtml = item.url ? `<a href="${item.url}" target="_blank" class="ref-link">🔗 參考網址</a>` : '';
                 
+                let conditionBadge = '';
+                if (item.desc.includes('全新')) {
+                    conditionBadge = `<span class="condition-badge badge-new">✨ 全新</span>`;
+                } else if (item.desc.includes('二手')) {
+                    conditionBadge = `<span class="condition-badge badge-used">♻️ 二手</span>`;
+                }
+                
+                let pinBadgeHtml = item.is_pinned ? `<div class="pin-badge"><i>🔥</i>精選</div>` : '';
+                let statusRowHtml = (pinBadgeHtml || conditionBadge) ? `<div class="status-row">${pinBadgeHtml}${conditionBadge}</div>` : '';
+
+                let thumbHtml = '';
+                if (item.images.length > 1) {
+                    thumbHtml = `
+                        <div class="thumb-overlay-container" onclick="event.stopPropagation()">
+                            <div class="thumb-scroll-area">
+                                ${item.images.map((img, i) => `<div class="thumb-dot ${i === currentImgIdx ? 'active' : ''}" style="background-image:url('${img}')" onclick="setMainImg(event, ${rawIdx}, ${i})"></div>`).join('')}
+                            </div>
+                        </div>`;
+                }
+
+                let btnText = cart[item.name] ? '✅ 已加入' : '➕ 加入清單';
+                let btnHtml = item.is_sold 
+                    ? `<button class="btn-add btn-sold" onclick="showToast('此商品已售出，下次請早！', '🚫')">🚫 已售出</button>`
+                    : `<button class="btn-add" onclick="toggleCart('${item.name.replace(/'/g, "\\'")}', ${item.num_price}, this)" style="background:${cart[item.name] ? '#e67e22' : '#3498db'}">${btnText}</button>`;
+
                 card.innerHTML = `
-                    <div class="img-wrapper" onclick="openBox('${item.images[0]}')">
-                        <div class="main-img-container"><img class="main-img" src="${item.images[0]}" onload="this.classList.add('loaded')"></div>
+                    <div class="img-wrapper">
+                        <div class="main-img-container" onclick="openBox(${rawIdx})">
+                            <div class="sold-badge">售出</div>
+                            <img class="main-img" id="main-img-${rawIdx}" src="${item.images[currentImgIdx]}" onload="this.classList.add('loaded')">
+                        </div>
+                        ${thumbHtml}
                     </div>
                     <div class="info">
-                        <div class="status-row">${item.is_pinned ? '<span class="pin-badge">🔥精選</span>' : ''}</div>
+                        ${statusRowHtml}
                         <h3>${item.name}</h3>
                         <div class="price-container">${priceHtml}</div>
                         <p class="desc">${item.desc}</p>
+                        ${urlHtml}
                     </div>
-                    <button class="btn-add ${item.is_sold ? 'btn-sold' : ''}" onclick="toggleCart('${item.name}', ${item.num_price}, this)">
-                        ${item.is_sold ? '🚫 已售出' : (cart[item.name] ? '✅ 已加入' : '➕ 加入清單')}
-                    </button>
+                    <div class="card-actions">
+                        ${btnHtml}
+                    </div>
                 `;
                 grid.appendChild(card);
             });
         }
 
-        // 同步電腦版與手機版的按鈕狀態
-        function syncButtons() {
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                const tag = btn.dataset.tag;
-                if (tag === 'all') {
-                    activeFilters.size === 0 ? btn.classList.add('active') : btn.classList.remove('active');
-                } else {
-                    activeFilters.has(tag) ? btn.classList.add('active') : btn.classList.remove('active');
-                }
+        window.resetFilters = function() {
+            document.getElementById('searchInput').value = '';
+            activeFilters.clear();
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('[data-tag="all"]').classList.add('active');
+            renderGrid();
+        }
+
+        window.setMainImg = function(e, rawIdx, imgIdx) {
+            e.stopPropagation();
+            if(cardImgState[rawIdx] === imgIdx) return; 
+            cardImgState[rawIdx] = imgIdx;
+            let imgEl = document.getElementById('main-img-' + rawIdx);
+            
+            imgEl.classList.remove('loaded');
+            setTimeout(() => {
+                imgEl.src = RAW_DATA[rawIdx].images[imgIdx];
+            }, 150);
+            
+            let overlay = e.target.closest('.thumb-scroll-area');
+            if(overlay) {
+                overlay.querySelectorAll('.thumb-dot').forEach(d => d.classList.remove('active'));
+                
+                let targetDot = e.target;
+                targetDot.classList.add('active');
+                
+                let scrollLeft = targetDot.offsetLeft - overlay.offsetWidth / 2 + targetDot.offsetWidth / 2;
+                overlay.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+            }
+        }
+
+        window.openBox = function(rawIdx) {
+            let item = RAW_DATA[rawIdx];
+            lbImages = item.images.map((b64, i) => item.highres[i] ? item.highres[i] : b64);
+            lbCurrentIdx = cardImgState[rawIdx];
+            document.getElementById('lightbox').style.display = 'flex';
+            updateLbImage();
+        }
+        
+        function updateLbImage() {
+            let bImg = document.getElementById('box-img');
+            let loader = document.getElementById('loading-text');
+            let counter = document.getElementById('lb-counter');
+            let lbBg = document.getElementById('lb-bg');
+            
+            bImg.style.display = 'none'; loader.style.display = 'block';
+            
+            if (lbImages.length > 1) {
+                counter.style.display = 'block';
+                counter.innerText = (lbCurrentIdx + 1) + ' / ' + lbImages.length;
+                document.getElementById('lb-prev').style.display = 'flex';
+                document.getElementById('lb-next').style.display = 'flex';
+            } else {
+                counter.style.display = 'none';
+                document.getElementById('lb-prev').style.display = 'none';
+                document.getElementById('lb-next').style.display = 'none';
+            }
+            
+            let src = lbImages[lbCurrentIdx];
+            lbBg.style.backgroundImage = `url('${src}')`;
+
+            let tmp = new Image();
+            tmp.onload = () => { bImg.src = src; loader.style.display = 'none'; bImg.style.display = 'block'; };
+            tmp.onerror = () => { bImg.src = src; loader.style.display = 'none'; bImg.style.display = 'block'; };
+            tmp.src = src;
+        }
+
+        window.lbNav = function(e, step) {
+            e.stopPropagation();
+            lbCurrentIdx = (lbCurrentIdx + step + lbImages.length) % lbImages.length;
+            updateLbImage();
+        }
+        window.closeBox = function(e) {
+            if(e.target.id === 'lightbox' || e.target.id === 'lb-close' || e.target.id === 'lb-bg') {
+                document.getElementById('lightbox').style.display = 'none';
+            }
+        }
+
+        function toggleCart(name, price, btn) {
+            event.stopPropagation();
+            if (cart[name]) { 
+                delete cart[name]; 
+                showToast('已從清單移除', '🗑️');
+            } else { 
+                cart[name] = price; 
+                showToast('成功加入清單', '✅');
+            }
+            renderGrid();
+            
+            let count = Object.keys(cart).length;
+            let cartBtn = document.getElementById('cartBtn');
+            cartBtn.innerText = '📝 結帳明細 (' + count + '件)';
+            
+            cartBtn.classList.remove('bounce-anim');
+            void cartBtn.offsetWidth; 
+            cartBtn.classList.add('bounce-anim');
+        }
+
+        function openLine() {
+            let isDesktop = !/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            let rawId = "{{LINE_ID}}".trim();
+            if (isDesktop && rawId !== "") {
+                let lineUrl = rawId.startsWith('@') ? 'line://ti/p/' + rawId : 'line://ti/p/~' + rawId;
+                window.location.href = lineUrl;
+            } else {
+                window.location.href = '{{LINE_LINK}}';
+            }
+        }
+
+        function animateCounter(id, endVal, duration) {
+            let obj = document.getElementById(id);
+            let startTime = null;
+            function step(currentTime) {
+                if (!startTime) startTime = currentTime;
+                let progress = Math.min((currentTime - startTime) / duration, 1);
+                let easeOut = 1 - Math.pow(1 - progress, 3); 
+                obj.innerText = Math.floor(easeOut * endVal).toLocaleString();
+                if (progress < 1) requestAnimationFrame(step);
+                else obj.innerText = endVal.toLocaleString();
+            }
+            requestAnimationFrame(step);
+        }
+
+        window.openCheckoutModal = function() {
+            let items = Object.keys(cart);
+            if (items.length === 0) { showToast('🛒 您的購物車是空的，請先挑選喔！', '📦'); return; }
+
+            let listHtml = '';
+            let total = 0;
+            items.forEach((name, idx) => {
+                let p = parseInt(cart[name]);
+                total += p;
+                listHtml += `<div class="checkout-item"><span class="checkout-item-name">${idx+1}. ${name}</span><span class="checkout-item-price"><span class="currency">NT$</span>${p.toLocaleString()}</span></div>`;
             });
-            document.querySelectorAll('.sort-btn').forEach(btn => {
-                btn.dataset.sort === activeSort ? btn.classList.add('active') : btn.classList.remove('active');
+            
+            document.getElementById('checkout-list').innerHTML = listHtml;
+            document.getElementById('checkout-modal').classList.add('show');
+            document.body.style.overflow = 'hidden'; 
+            
+            animateCounter('checkout-total', total, 800);
+        }
+
+        window.closeCheckoutModal = function() {
+            document.getElementById('checkout-modal').classList.remove('show');
+            document.body.style.overflow = '';
+        }
+
+        window.confirmAndCopy = function() {
+            let items = Object.keys(cart);
+            let text = "【我要購買以下商品】\n";
+            let total = 0;
+            for(let i=0; i<items.length; i++) {
+                let p = cart[items[i]];
+                text += (i+1) + ". " + items[i] + " - NT$ " + p + "\n";
+                total += parseInt(p);
+            }
+            text += "------------------\n總金額：NT$ " + total;
+
+            navigator.clipboard.writeText(text).then(() => {
+                closeCheckoutModal();
+                alert("💡 貼心小提醒：\n\n【購買明細與金額】已經為您複製好囉！\n\n跳轉到 LINE 之後，請記得在對話框【長按 ➜ 選擇貼上】，傳送給老闆才算完成訂單喔！");
+                openLine();
+            }).catch(err => {
+                closeCheckoutModal();
+                alert("❌ 瀏覽器封鎖複製功能，請手動記下商品傳給老闆。");
             });
         }
 
-        // 綁定所有按鈕事件
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const tag = btn.dataset.tag;
-                if (tag === 'all') activeFilters.clear();
-                else activeFilters.has(tag) ? activeFilters.delete(tag) : activeFilters.add(tag);
-                syncButtons();
-                renderGrid();
-            });
+        function showToast(msg, icon = '🔔') { 
+            let t = document.getElementById('toast'); 
+            t.innerHTML = `<span style="font-size:1.2rem">${icon}</span> <span>${msg}</span>`;
+            t.classList.add('show'); 
+            setTimeout(() => t.classList.remove('show'), 2500); 
+        }
+        
+        document.getElementById('searchInput').addEventListener('input', renderGrid);
+        
+        document.querySelectorAll('.filter-btn').forEach(btn => { 
+            btn.addEventListener('click', function() { 
+                const tag = this.dataset.tag; 
+                if (tag === 'all') { activeFilters.clear(); document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); this.classList.add('active'); } 
+                else { document.querySelector('[data-tag="all"]').classList.remove('active'); if (activeFilters.has(tag)) { activeFilters.delete(tag); this.classList.remove('active'); } else { activeFilters.add(tag); this.classList.add('active'); } } 
+                renderGrid(); 
+            }); 
         });
 
         document.querySelectorAll('.sort-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                activeSort = btn.dataset.sort;
-                syncButtons();
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                activeSort = this.dataset.sort;
                 renderGrid();
             });
         });
 
-        function toggleCart(name, price, btn) {
-            if (cart[name]) delete cart[name];
-            else cart[name] = price;
-            renderGrid();
-            document.getElementById('cartBtn').innerText = `📝 結帳明細 (${Object.keys(cart).length}件)`;
-            showToast(cart[name] ? '已加入清單' : '已移除商品');
-        }
-
-        function openFilterDrawer() { document.getElementById('filter-drawer').classList.add('show'); document.getElementById('filter-overlay').classList.add('show'); }
-        function closeFilterDrawer() { document.getElementById('filter-drawer').classList.remove('show'); document.getElementById('filter-overlay').classList.remove('show'); }
-        function openBox(src) { document.getElementById('box-img').src = src; document.getElementById('lightbox').style.display = 'flex'; }
-        function showToast(msg) { const t = document.getElementById('toast'); t.innerText = msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2000); }
-        function openLine() { window.location.href = "{{LINE_LINK}}"; }
-        
-        document.getElementById('searchInput').addEventListener('input', renderGrid);
         renderGrid();
     </script>
 </body></html>
@@ -524,8 +863,8 @@ $FinalHtml = $HtmlTemplate.Replace('{{JSON}}', $JsonString).Replace('{{TITLE}}',
 
 try {
     Write-Host "開始上傳至 GitHub..." -ForegroundColor Cyan
-    git add . ; git commit -m "UI Final: Desktop Double-Layer Nav + Luxury UI" ; git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 旗艦版雙層導覽列上線！電腦版已經可以享受直球對決的快感了！", 64, "旗艦版上線")
+    git add . ; git commit -m "UI Final: Single Column Big Font + Bottom Filter Drawer" ; git push origin main
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 大功告成！單欄霸氣滿版加上超省空間的「底部篩選抽屜」已全部部署完畢！", 64, "旗艦版上線")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 上傳 GitHub 失敗！", 48, "警告")
 }
