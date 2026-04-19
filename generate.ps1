@@ -288,10 +288,10 @@ $HtmlTemplate = @'
         /* 🔥 A. 頂部極簡化設計 (釋放手機空間) */
         .top-nav { background: rgba(26, 26, 26, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 12px 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
         .search-row { display: flex; gap: 12px; align-items: center; max-width: 1400px; margin: 0 auto; }
-        .search-box { flex-grow: 1; margin: 0; padding: 12px 20px; border: 1px solid #444; border-radius: 25px; background: rgba(36, 36, 36, 0.9); color: #fff; box-sizing: border-box; font-size: 1rem; outline: none; transition: 0.3s; font-family: 'Noto Sans TC', sans-serif; }
+        .search-box { flex: 1; min-width: 0; margin: 0; padding: 12px 16px; border: 1px solid #444; border-radius: 25px; background: rgba(36, 36, 36, 0.9); color: #fff; box-sizing: border-box; font-size: 1rem; outline: none; transition: 0.3s; font-family: 'Noto Sans TC', sans-serif; }
         .search-box:focus { border-color: #3498db; background: #222; }
         
-        .btn-open-filter { flex-shrink: 0; background: #2a2a2a; color: #eee; border: 1px solid #555; border-radius: 25px; padding: 12px 20px; font-size: 0.95rem; cursor: pointer; font-family: 'Noto Sans TC', sans-serif; font-weight: bold; transition: 0.2s; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        .btn-open-filter { flex-shrink: 0; white-space: nowrap; background: #2a2a2a; color: #eee; border: 1px solid #555; border-radius: 25px; padding: 12px 16px; font-size: 0.95rem; cursor: pointer; font-family: 'Noto Sans TC', sans-serif; font-weight: bold; transition: 0.2s; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
         .btn-open-filter:hover { background: #333; border-color: #777; }
         .btn-open-filter:active { transform: scale(0.95); }
         
