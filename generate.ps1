@@ -452,20 +452,32 @@ $HtmlTemplate = @'
         }
         @media (min-width: 1200px) { .grid-container { grid-template-columns: repeat(4, 1fr); gap: 28px; } }
 
-        /* 🔥 新增：電腦版雙層導覽列專用樣式 (完全不影響原版設計) */
+        /* 🔥 新增：電腦版雙層導覽列專用樣式 (A+B融合：置中對稱 + 質感分隔線) */
         .desktop-filter-bar { display: none; }
-        .filter-label-text { color: #aaa; font-size: 0.95rem; font-weight: bold; white-space: nowrap; margin-right: 8px; }
+        .filter-label-text { color: #aaa; font-size: 0.85rem; font-weight: bold; white-space: nowrap; margin-right: 6px; }
         .filter-group-wrap { display: flex; align-items: center; gap: 5px; }
+        
+        /* 單獨縮小電腦版導覽列上的按鈕，絕對不影響手機抽屜 */
+        .desktop-filter-bar .filter-btn, .desktop-filter-bar .sort-btn {
+            padding: 6px 14px;
+            font-size: 0.85rem;
+        }
 
         @media (min-width: 900px) {
             .btn-open-filter { display: none !important; }
             .desktop-filter-bar { 
                 display: flex; 
-                justify-content: space-between; 
+                justify-content: center; /* B選項：置中對齊 */
                 align-items: center; 
                 margin-top: 16px; 
                 padding-top: 16px; 
                 border-top: 1px solid rgba(255,255,255,0.08); 
+            }
+            /* A選項：質感分隔線 */
+            .filter-group-wrap:first-child {
+                padding-right: 24px;
+                margin-right: 24px;
+                border-right: 1px solid rgba(255,255,255,0.2);
             }
             .top-nav { padding: 16px 24px; }
         }
@@ -917,8 +929,8 @@ $FinalHtml = $HtmlTemplate.Replace('{{JSON}}', $JsonString).Replace('{{TITLE}}',
 
 try {
     Write-Host "開始上傳至 GitHub..." -ForegroundColor Cyan
-    git add . ; git commit -m "UI Final: Single Column Big Font + Bottom Filter Drawer" ; git push origin main
-    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 大功告成！單欄霸氣滿版加上超省空間的「底部篩選抽屜」已全部部署完畢！", 64, "旗艦版上線")
+    git add . ; git commit -m "UI Final: Center alignment with separator for desktop filter" ; git push origin main
+    [Microsoft.VisualBasic.Interaction]::MsgBox("🎉 大功告成！置中對稱 + 質感分隔線的旗艦版已完美上線！", 64, "樣式更新完成")
 } catch {
     [Microsoft.VisualBasic.Interaction]::MsgBox("⚠️ 上傳 GitHub 失敗！", 48, "警告")
 }
